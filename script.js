@@ -30,13 +30,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMode = 'dream'; // 'dream' will be our mandala
     let inactivityTimer;
     let controlsVisible = true;
+    let slitCount = 16; // Number of slits in the cylinder
+    let frameRate = 60; // Assumed frame rate
 
     // --- Three.js State ---
-    let three, scene, camera, renderer, composer, pointLight, cylinder;
+    let scene, camera, renderer, composer, pointLight, cylinder, clock;
 
     // --- Audio Engine (Tone.js) ---
     const player = new Tone.Player({
-        url: "Audio/Repetition- Max Cooper.m4a", // Starting with one track
+        url: "Audio/Repetition- Max Cooper.m4a",
         loop: true,
         fadeOut: 2,
     }).toDestination();
@@ -59,81 +61,158 @@ document.addEventListener('DOMContentLoaded', () => {
     const initThree = () => {
         // Scene
         scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+        clock = new THREE.Clock();
 
-        // Camera
+        // Camera - Positioned slightly off-center inside the cylinder for the classic effect
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 5;
+        camera.position.set(0, 0, 1.9); // (radius - epsilon)
+        camera.lookAt(0, 0, 0);
 
-        // Renderer
-        renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true });
+        // Renderer with high-quality shadows
+        renderer = new THREE.WebGLRenderer({
+            canvas: threeCanvas,
+            antialias: true,
+        });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.toneMapping = THREE.ReinhardToneMapping;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
 
-        // Light
-        pointLight = new THREE.PointLight(0xffffff, 1, 100);
+        // A single, powerful point light inside the cylinder
+        pointLight = new THREE.PointLight(0xffffff, 5, 50);
         pointLight.position.set(0, 0, 0);
+        pointLight.castShadow = true;
+        pointLight.shadow.mapSize.width = 1024;
+        pointLight.shadow.mapSize.height = 1024;
+        pointLight.shadow.camera.near = 0.5;
+        pointLight.shadow.camera.far = 10;
         scene.add(pointLight);
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+        
+        // Minimal ambient light for higher contrast
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.01);
         scene.add(ambientLight);
 
-        // Cylinder with Slits
-        const slitCount = 16;
-        const texture = createSlitTexture(slitCount);
-        const material = new THREE.MeshStandardMaterial({
-            map: texture,
-            side: THREE.DoubleSide,
-            transparent: true,
-            alphaTest: 0.5,
-        });
-        const geometry = new THREE.CylinderGeometry(2, 2, 4, 64, 1, true);
-        cylinder = new THREE.Mesh(geometry, material);
-        scene.add(cylinder);
+        // A plane to catch the shadows, simulating the user's closed eyelids
+        const shadowPlaneGeo = new THREE.PlaneGeometry(30, 30);
+        const shadowPlaneMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const shadowPlane = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat);
+        shadowPlane.position.z = 2.1; // Just in front of the camera
+        scene.add(shadowPlane);
 
-        // Post-processing for Bloom
+        // Build the cylinder from geometric panels, not a texture
+        createCylinderWithGeometricSlits(slitCount);
+
+        // Post-processing for light "bleed"
         const renderPass = new RenderPass(scene, camera);
-        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-        bloomPass.threshold = 0.2;
-        bloomPass.strength = 1.2; // glow intensity
-        bloomPass.radius = 0.5;
-
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            1.8, // Strength
+            0.6, // Radius
+            0.1  // Threshold
+        );
         composer = new EffectComposer(renderer);
         composer.addPass(renderPass);
         composer.addPass(bloomPass);
     };
 
-    const createSlitTexture = (slitCount) => {
-        const textureCanvas = document.createElement('canvas');
-        textureCanvas.width = 512;
-        textureCanvas.height = 512;
-        const textureCtx = textureCanvas.getContext('2d');
+    const createCylinderWithGeometricSlits = (count) => {
+        if (cylinder) scene.remove(cylinder); // Remove old one if exists
+        
+        cylinder = new THREE.Group();
+        scene.add(cylinder);
 
-        textureCtx.fillStyle = 'black';
-        textureCtx.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
+        const radius = 2;
+        const height = 4;
+        const wallThickness = 0.1;
+        
+        // We will create the cylinder from vertical panels
+        const panelCount = count * 2; // Create a panel for the solid part and a gap for the slit
+        const anglePerPanel = (2 * Math.PI) / panelCount;
+        const panelWidth = Math.tan(anglePerPanel / 2) * radius * 2;
 
-        textureCtx.fillStyle = 'white';
-        const slitWidth = textureCanvas.width / (slitCount * 2);
-        for (let i = 0; i < slitCount * 2; i += 2) {
-            textureCtx.fillRect(i * slitWidth, 0, slitWidth, textureCanvas.height);
+        const panelGeometry = new THREE.BoxGeometry(panelWidth, height, wallThickness);
+        const panelMaterial = new THREE.MeshStandardMaterial({
+            color: 0x111111,
+            metalness: 0.9,
+            roughness: 0.4,
+        });
+
+        for (let i = 0; i < panelCount; i += 2) { // Step by 2 to leave a gap
+            const angle = i * anglePerPanel;
+            const panel = new THREE.Mesh(panelGeometry, panelMaterial.clone());
+            panel.castShadow = true;
+
+            const x = radius * Math.sin(angle);
+            const z = radius * Math.cos(angle);
+            panel.position.set(x, 0, z);
+            panel.lookAt(0, 0, 0);
+            cylinder.add(panel);
         }
-
-        return new THREE.CanvasTexture(textureCanvas);
     };
 
     const animateThree = () => {
         if (!isRunning || currentMode !== 'classic') return;
+        
+        const delta = clock.getDelta();
+        
+        // Correct, physics-based rotation
+        const rotationPerSecond = (2 * Math.PI * frequency) / slitCount;
+        cylinder.rotation.y += rotationPerSecond * delta;
 
-        // Rotate cylinder based on frequency
-        const rotationSpeed = (frequency * 2 * Math.PI) / 60; // rad/frame at 60fps
-        cylinder.rotation.y += rotationSpeed;
-
-        // Pulse light with bass
-        const pulse = 1 + (bassEnergy * 5);
-        pointLight.intensity = pulse;
-        pointLight.color.setHSL(hue / 360, 1, 0.5);
+        // Natural, subtle light flicker + audio-reactive pulse
+        const naturalFlicker = 1 + (Math.sin(performance.now() * 0.01) * 0.1);
+        const pulse = (1 + (bassEnergy * 4)) * naturalFlicker;
+        pointLight.intensity = pulse * 5; // Multiply intensity for a brighter effect
+        pointLight.color.setHSL(hue / 360, 0.8, 0.6);
 
         composer.render();
         animationFrameId = requestAnimationFrame(animateThree);
+    };
+
+    // --- Inactivity Detection ---
+    const startInactivityTimer = () => {
+        clearTimeout(inactivityTimer);
+        
+        // Show controls immediately when activity is detected
+        if (!controlsVisible) {
+            showControls();
+        }
+        
+        // Set a new timer to hide controls after 3 seconds
+        inactivityTimer = setTimeout(() => {
+            hideControls();
+        }, 3000); // 3 seconds
+    };
+    
+    const showControls = () => {
+        controls.style.opacity = '1';
+        controls.style.transform = 'translateX(-50%) translateY(0)';
+        controlsVisible = true;
+    };
+    
+    const hideControls = () => {
+        controls.style.opacity = '0';
+        controls.style.transform = 'translateX(-50%) translateY(20px)';
+        controlsVisible = false;
+    };
+    
+    // Setup activity listeners
+    const setupActivityListeners = () => {
+        document.addEventListener('mousemove', startInactivityTimer);
+        document.addEventListener('mousedown', startInactivityTimer);
+        document.addEventListener('keydown', startInactivityTimer);
+        document.addEventListener('touchstart', startInactivityTimer);
+        document.addEventListener('touchmove', startInactivityTimer);
+    };
+    
+    // Remove activity listeners
+    const removeActivityListeners = () => {
+        document.removeEventListener('mousemove', startInactivityTimer);
+        document.removeEventListener('mousedown', startInactivityTimer);
+        document.removeEventListener('keydown', startInactivityTimer);
+        document.removeEventListener('touchstart', startInactivityTimer);
+        document.removeEventListener('touchmove', startInactivityTimer);
     };
 
     // --- New Mandala/Chromatic Flicker Engine ---
@@ -213,51 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, "8n"); // Default to 8th note flicker
 
-    // --- Inactivity Detection ---
-    const startInactivityTimer = () => {
-        clearTimeout(inactivityTimer);
-        
-        // Show controls immediately when activity is detected
-        if (!controlsVisible) {
-            showControls();
-        }
-        
-        // Set a new timer to hide controls after 3 seconds
-        inactivityTimer = setTimeout(() => {
-            hideControls();
-        }, 3000); // 3 seconds
-    };
-    
-    const showControls = () => {
-        controls.style.opacity = '1';
-        controls.style.transform = 'translateX(-50%) translateY(0)';
-        controlsVisible = true;
-    };
-    
-    const hideControls = () => {
-        controls.style.opacity = '0';
-        controls.style.transform = 'translateX(-50%) translateY(20px)';
-        controlsVisible = false;
-    };
-    
-    // Setup activity listeners
-    const setupActivityListeners = () => {
-        document.addEventListener('mousemove', startInactivityTimer);
-        document.addEventListener('mousedown', startInactivityTimer);
-        document.addEventListener('keydown', startInactivityTimer);
-        document.addEventListener('touchstart', startInactivityTimer);
-        document.addEventListener('touchmove', startInactivityTimer);
-    };
-    
-    // Remove activity listeners
-    const removeActivityListeners = () => {
-        document.removeEventListener('mousemove', startInactivityTimer);
-        document.removeEventListener('mousedown', startInactivityTimer);
-        document.removeEventListener('keydown', startInactivityTimer);
-        document.removeEventListener('touchstart', startInactivityTimer);
-        document.removeEventListener('touchmove', startInactivityTimer);
-    };
-
     const startExperience = () => {
         if (isRunning) return;
         isRunning = true;
@@ -269,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentMode === 'classic') {
             canvas.classList.add('hidden');
             threeCanvas.classList.remove('hidden');
-            if (!scene) initThree(); // Initialize on first run
+            if (!scene) initThree();
             animationFrameId = requestAnimationFrame(animateThree);
         } else {
             threeCanvas.classList.add('hidden');
@@ -304,6 +338,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // Clear canvas to black
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (scene) { // Dispose of Three.js objects
+            scene.traverse(object => {
+                if (object.geometry) object.geometry.dispose();
+                if (object.material) {
+                     if (Array.isArray(object.material)) {
+                        object.material.forEach(material => material.dispose());
+                    } else {
+                        object.material.dispose();
+                    }
+                }
+            });
+            renderer.dispose();
+            scene = null;
+        }
     };
 
     const updateFrequency = () => {
@@ -373,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', () => {
         if (!isRunning) return;
 
-        if (currentMode === 'classic') {
+        if (currentMode === 'classic' && scene) {
             // Handle Three.js resize
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
