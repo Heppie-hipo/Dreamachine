@@ -1,4 +1,4 @@
-# 🧠 Dreamachine — A Consciousness Visualizer Built in Code
+🧠 Dreamachine — A Consciousness Visualizer Built in Code
 
 **Dreamachine** is a first-of-its-kind, fully digital, open-source light-and-sound simulator inspired by Brion Gysin’s original Dreamachine — a flickering stroboscopic experience known to evoke deep states of consciousness, altered perception, and even dream-like visions with eyes closed.
 
@@ -7,7 +7,7 @@
 
 ---
 
-## 🌌 Live Simulation
+🌌 Live Simulation
 
 Real-time browser-based visual engine using **Three.js** and **Tone.js**  
 Built with love, light, and deep aesthetic care.
@@ -16,6 +16,11 @@ Built with love, light, and deep aesthetic care.
 - `Classic`: Rotating virtual cylinder with slits and central flickering light source
 - `Dream`: Audio-reactive chromatic mandala visuals
 - `Void`: High-frequency light/dark pulsation (minimalistic)
+
+---
+
+🌍 Live Demo  
+Try it now: [dreamachine.pages.dev](https://dreamachine.pages.dev/)
 
 ---
 
@@ -49,24 +54,24 @@ You can run the Dreamachine in your browser via a simple Python server:
 
 ### Run it:
 
-git clone https://github.com/Heppie-hipo/Dreamachine.git
-cd Dreamachine
-python3 -m http.server
-Then open your browser and visit: http://localhost:8000
+- git clone https://github.com/Heppie-hipo/Dreamachine.git
+- cd Dreamachine
+- python3 -m http.server
+- Then open your browser and visit: http://localhost:8000
 
 ---
 
 🚧 Roadmap
 
- Add VR/WebXR support for full immersion
+- Add VR/WebXR support for full immersion
 
- Modular audio engine (upload your own tracks)
+- Modular audio engine (upload your own tracks)
 
- Multi-user synchronized experiences
+- Multi-user synchronized experiences
 
- Save/share presets
+- Save/share presets
 
- Neurofeedback integration via EEG
+- Neurofeedback integration via EEG
 
 ---
 
