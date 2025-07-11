@@ -1,186 +1,368 @@
-body, html {
+/* ---
+    Global Resets & Typography
+--- */
+:root {
+    --background-color: #0a0a0a;
+    --text-color: rgba(255, 255, 255, 0.85);
+    --primary-color: #ffffff;
+    --secondary-color: #888;
+    --font-main: 'Inter', sans-serif;
+    --font-serif: 'Lora', serif;
+}
+
+* {
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    font-family: var(--font-main);
+    line-height: 1.6;
+    overflow: hidden; /* Prevent scrolling during experience */
+}
+
+/* ---
+    Onboarding Experience Styling (Mobile-First)
+--- */
+
+#onboarding-container {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    background-color: #000;
-    color: #fff;
-    font-family: 'Inter', sans-serif;
-    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+    transition: opacity 0.5s ease-out;
+    z-index: 100;
+    overflow-y: auto; /* Enable vertical scrolling */
+    padding: 20px 0; /* Add padding to ensure content isn't flush with edges */
+}
+
+#onboarding-container.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.onboarding-step {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    max-width: 90%; /* Use percentage for better flexibility */
+    padding: 1rem;
+    animation: fadeIn 0.8s ease-in-out;
+    margin: auto; /* Center vertically when scrolling */
+}
+
+/* First screen (welcome) remains the same size */
+#welcome-screen {
+    max-width: 90%;
+}
+
+/* Disclaimer and preparation screens are narrower on mobile */
+#disclaimer-screen, #preparation-screen {
+    max-width: 85%;
+}
+
+.onboarding-step.active {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.onboarding-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    width: 100%; /* Ensure content takes full width of container */
+}
+
+.onboarding-title {
+    font-family: var(--font-serif);
+    font-size: 2rem; /* Reduced for mobile */
+    font-weight: 600;
+    color: var(--primary-color);
+    line-height: 1.2;
+}
+
+.onboarding-subtitle {
+    font-family: var(--font-serif);
+    font-size: 1.1rem; /* Reduced for mobile */
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-top: 0.8rem;
+}
+
+.onboarding-text {
+    font-size: 1rem; /* Reduced for mobile */
+    color: var(--text-color);
+}
+
+.onboarding-quote {
+    font-family: var(--font-serif);
+    font-style: italic;
+    color: var(--secondary-color);
+    margin-top: 0.8rem;
+}
+
+.disclaimer-list, .preparation-list {
+    list-style: none;
+    text-align: left;
+    margin: 0 auto;
+    width: 100%; /* Take full available width */
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+/* Smaller font size for lists on mobile */
+.disclaimer-list li, .preparation-list li {
+    font-size: 0.95rem;
+}
+
+.disclaimer-list li::before, .preparation-list li::before {
+    content: '→';
+    margin-right: 10px;
+    color: var(--primary-color);
+}
+
+.onboarding-button {
+    background: var(--primary-color);
+    color: var(--background-color);
+    border: 1px solid var(--primary-color);
+    padding: 10px 20px; /* Adjusted padding */
+    border-radius: 50px;
+    font-size: 0.9rem; /* Adjusted font size */
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 1.5rem; /* More space before buttons */
+    align-self: center;
+}
+
+.onboarding-button:hover {
+    background: transparent;
+    color: var(--primary-color);
+}
+
+
+/* ---
+    Main Dreamachine Interface
+--- */
+
+canvas {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#threejs-canvas {
+    z-index: 1;
 }
 
 .hidden {
     display: none !important;
 }
 
-/* Modal Styles */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background: #111;
-    padding: 40px;
-    border-radius: 8px;
-    max-width: 500px;
-    text-align: center;
-    border: 1px solid #333;
-}
-
-.modal-content h2 {
-    font-size: 1.8em;
-    font-weight: 400;
-    margin-top: 0;
-    color: #fff;
-}
-
-.modal-content p {
-    font-size: 1.1em;
-    line-height: 1.6;
-    color: #ccc;
-}
-
-/* Intro Screen */
-#intro-screen {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    text-align: center;
-}
-
-.intro-content h1 {
-    font-size: 2.5em;
-    font-weight: 300;
-    letter-spacing: 1px;
-    max-width: 600px;
-}
-
-/* Buttons */
-button {
-    background: transparent;
-    border: 1px solid #888;
-    color: #fff;
-    padding: 12px 24px;
-    font-size: 1em;
-    border-radius: 30px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: 'Inter', sans-serif;
-}
-
-button:hover {
-    background: #fff;
-    color: #000;
-    border-color: #fff;
-}
-
-#agree-button {
-    margin-top: 20px;
-}
-
-/* Dreamachine */
-#dreamachine-container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-}
-
-#dreamachine-canvas, #threejs-canvas {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-}
-
+/* ---
+    Controls Styling (Mobile-First)
+--- */
 #controls {
-    position: absolute;
-    bottom: 30px;
+    position: fixed;
+    bottom: 20px;
     left: 50%;
+    width: 90%; /* Use percentage width */
     transform: translateX(-50%);
-    background: rgba(17, 17, 17, 0.8);
+    background: rgba(20, 20, 20, 0.85);
     backdrop-filter: blur(10px);
-    padding: 15px 25px;
-    border-radius: 40px;
-    display: flex;
-    align-items: center;
-    gap: 30px;
-    border: 1px solid #333;
+    border-radius: 15px;
+    padding: 15px; /* Adjusted padding */
     z-index: 10;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column; /* Stack controls vertically on mobile */
+    align-items: stretch; /* Stretch items to fill width */
+    gap: 15px; /* Space out stacked controls */
     transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .control-group {
     display: flex;
+    justify-content: space-between; /* Space out label and control */
     align-items: center;
-    gap: 15px;
+    gap: 10px;
 }
 
-.control-group label {
-    font-size: 0.9em;
-    color: #aaa;
+.control-group.frequency-slider-group {
+    flex-direction: column; /* Stack slider label on top */
+    align-items: stretch;
+    gap: 8px;
 }
 
-input[type="range"] {
-    -webkit-appearance: none;
-    width: 150px;
-    height: 2px;
-    background: #555;
-    outline: none;
-    transition: opacity 0.2s;
-    border-radius: 2px;
+.control-group label, .mode-display {
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+    font-weight: 500;
 }
 
-input[type="range"]::-webkit-slider-thumb {
+.control-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-color);
+    padding: 10px 15px; /* Larger tap target */
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s ease;
+}
+
+.control-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.control-button.exit {
+    background: rgba(220, 50, 50, 0.7);
+}
+.control-button.exit:hover {
+    background: rgba(220, 50, 50, 1);
+}
+
+#hz-value {
+    color: var(--primary-color);
+    font-weight: 500;
+    text-align: right; /* Align to the right in its container */
+}
+
+/* Slider Styles */
+#freq-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #fff;
+    width: 100%; /* Full width */
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    outline: none;
+    transition: opacity 0.2s;
+}
+
+#freq-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px; /* Larger thumb for touch */
+    height: 24px; /* Larger thumb for touch */
+    background: var(--primary-color);
     cursor: pointer;
     border-radius: 50%;
 }
 
-#mode-select {
-    background: transparent;
-    color: #fff;
+#freq-slider::-moz-range-thumb {
+    width: 24px; /* Larger thumb for touch */
+    height: 24px; /* Larger thumb for touch */
+    background: var(--primary-color);
+    cursor: pointer;
+    border-radius: 50%;
     border: none;
-    font-size: 1em;
-    -webkit-appearance: none;
-    appearance: none;
-    padding: 5px;
-    font-family: 'Inter', sans-serif;
 }
 
+/* ---
+    Exit Message
+--- */
 #exit-message {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: #000;
-    z-index: 20;
+    background-color: var(--background-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
 }
 
-#exit-message h1 {
-    font-size: 2.5em;
-    font-weight: 300;
-    letter-spacing: 1px;
-    max-width: 600px;
+#exit-message p {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    color: var(--primary-color);
     text-align: center;
+    animation: fadeIn 1s ease-in;
+}
+
+/* ---
+    Desktop and Tablet Enhancements
+--- */
+@media (min-width: 768px) {
+    #onboarding-container {
+        overflow-y: hidden; /* Disable scrolling on larger screens */
+        padding: 0; /* Remove padding on desktop */
+    }
+    
+    .onboarding-step {
+        max-width: 600px;
+        padding: 2rem;
+    }
+    
+    /* Reset all screens to same width on desktop */
+    #welcome-screen, #disclaimer-screen, #preparation-screen {
+        max-width: 600px;
+    }
+
+    .onboarding-title {
+        font-size: 2.5rem; /* Restore original size */
+    }
+
+    .onboarding-subtitle {
+        font-size: 1.2rem;
+    }
+
+    .onboarding-text {
+        font-size: 1.1rem;
+    }
+    
+    .disclaimer-list li, .preparation-list li {
+        font-size: 1.1rem; /* Restore font size on desktop */
+    }
+    
+    .onboarding-button {
+        padding: 12px 24px;
+        font-size: 1rem;
+        margin-top: 0.8rem; /* Less space needed on desktop */
+    }
+
+    #controls {
+        flex-direction: row; /* Horizontal layout on larger screens */
+        width: auto; /* Auto width based on content */
+        align-items: center;
+        gap: 30px;
+        bottom: 30px;
+        padding: 15px 25px;
+    }
+
+    .control-group.frequency-slider-group {
+        flex-direction: row; /* Back to horizontal */
+        align-items: center;
+        gap: 10px;
+    }
+
+    #freq-slider {
+        width: 120px; /* Restore original width */
+    }
+
+    #hz-value {
+       min-width: 60px;
+    }
 } 

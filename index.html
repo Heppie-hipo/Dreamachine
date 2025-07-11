@@ -7,58 +7,81 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Safety Disclaimer Modal -->
-    <div id="safety-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2>Disclaimer</h2>
-            <p>This app produces flashing light patterns. It is not recommended for users with a history of epilepsy or sensitivity to strobe effects.</p>
-            <p>Use in a dimly lit room, and do not stare directly at the screen. The experience is intended to be viewed with your eyes closed.</p>
-            <button id="agree-button">I Understand</button>
+    <div id="onboarding-container">
+        <!-- Step 1: Welcome -->
+        <div id="welcome-screen" class="onboarding-step active">
+            <div class="onboarding-content">
+                <h1 class="onboarding-title">Welcome to the Dreamachine</h1>
+                <p class="onboarding-text">A journey inward, through flicker, light, and sound.</p>
+                <p class="onboarding-text">Inspired by Brion Gysin's original invention, this digital Dreamachine is an eyes-closed experience that uses rhythmic light and sound to stimulate altered states of consciousness. What you see inside — is your own mind.</p>
+                <button id="welcome-continue-btn" class="onboarding-button">Continue</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Disclaimer -->
+        <div id="disclaimer-screen" class="onboarding-step">
+            <div class="onboarding-content">
+                <h2 class="onboarding-title">⚠️ Important Disclaimer</h2>
+                <p class="onboarding-text">Please read carefully before beginning:</p>
+                <ul class="disclaimer-list">
+                    <li>This experience uses high-frequency flickering light. It may trigger seizures in people with photosensitive epilepsy or related conditions.</li>
+                    <li>Do not proceed if you are unsure of your sensitivity to strobe effects.</li>
+                    <li>This is not a medical device, and is not intended to treat, cure, or diagnose any condition.</li>
+                    <li>Dreamachine is designed for artistic, meditative, and introspective purposes only.</li>
+                    <li>By continuing, you accept full responsibility for your experience.</li>
+                </ul>
+                <button id="disclaimer-agree-btn" class="onboarding-button">I Understand & Agree</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Preparation -->
+        <div id="preparation-screen" class="onboarding-step">
+            <div class="onboarding-content">
+                <h2 class="onboarding-title">Preparation</h2>
+                <ul class="preparation-list">
+                    <li>Sit or lie down in a safe, quiet space.</li>
+                    <li>Close your eyes gently. Keep them closed throughout.</li>
+                    <li>Take a few deep breaths. Let go of expectations.</li>
+                    <li>Use headphones or good speakers for best audio quality.</li>
+                    <li>Allow the flicker to wash over your inner field of vision.</li>
+                </ul>
+                <h3 class="onboarding-subtitle">Begin When You Are Ready</h3>
+                <p class="onboarding-text">You are about to enter a world that isn't rendered — it's revealed.<br>Not from the screen — but from the deep architecture of your own mind.</p>
+                <p class="onboarding-quote">"The Dreamachine is the first artwork to be experienced with the eyes closed."<br>— Brion Gysin</p>
+                <button id="begin-experience-btn" class="onboarding-button">Begin Experience</button>
+            </div>
         </div>
     </div>
 
-    <!-- Intro Screen -->
-    <div id="intro-screen">
-        <div class="intro-content">
-            <h1>"Close your eyes. The void will meet you."</h1>
-            <button id="start-button">Begin</button>
-        </div>
-    </div>
-
-    <!-- Dreamachine Experience -->
     <div id="dreamachine-container" class="hidden">
-        <canvas id="dreamachine-canvas"></canvas>
-        <canvas id="threejs-canvas" class="hidden"></canvas>
+        <canvas id="dreamachine-canvas" class="hidden"></canvas>
+        <canvas id="threejs-canvas"></canvas>
         <div id="controls">
-            <div class="control-group">
-                <label for="hz-slider">Frequency</label>
-                <input type="range" id="hz-slider" min="6" max="13" value="8" step="0.1">
-                <span id="hz-value">8 Hz</span>
+            <div class="control-group frequency-slider-group">
+                <label for="freq-slider">Frequency</label>
+                <input type="range" min="0" max="3" value="1" id="freq-slider">
+                <span id="hz-value">8.0 Hz</span>
             </div>
             <div class="control-group">
                 <label for="sound-toggle">Sound</label>
-                <button id="sound-toggle">On</button>
+                <button id="sound-toggle" class="control-button">On</button>
             </div>
-             <div class="control-group">
+            <div class="control-group">
                 <label for="mode-select">Mode</label>
-                <select id="mode-select">
-                    <option value="dream" selected>Mandala</option>
-                    <option value="stillness">Void</option>
-                    <option value="classic">Classic</option>
-                </select>
+                <span class="mode-display">Classic</span>
             </div>
-            <button id="exit-button">Exit</button>
-        </div>
-        <div id="exit-message" class="hidden">
-             <h1>"You are returning to form. Carry what you saw."</h1>
+            <div class="control-group">
+                <button id="exit-button" class="control-button exit">Exit</button>
+            </div>
         </div>
     </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <div id="exit-message" class="hidden">
+        <p>Thank you for using the Dreamachine. Come back soon.</p>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.min.js"></script>
     <script type="module" src="script.js"></script>
 </body>
 </html> 
