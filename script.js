@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Three.js State ---
     let scene, camera, renderer, composer, cylinder, clock, innerCylinder;
+    let strobeGroup, cylinderMask;
 
     // --- Audio Engine (Tone.js) ---
     const player = new Tone.Player({
@@ -56,44 +57,45 @@ document.addEventListener('DOMContentLoaded', () => {
         // Camera - Position based on screen size for better mobile experience
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         
-        // Adjust camera position based on screen width
-        if (window.innerWidth <= 768) {
-            camera.position.set(0, 0, 5.0); // Further away on mobile for less zoom
-        } else {
-            camera.position.set(0, 0, 3.5); // Closer on desktop for immersive feel
-        }
+        // Adjust camera position to match mobile view on all screen sizes
+        // This will show 4 complete columns with just a bit on the edges
+        camera.position.set(0, 0, 5.0);
         camera.lookAt(0, 0, 0);
 
-        // Renderer with high-quality shadows
+        // Renderer with stencil buffer enabled for masking
         renderer = new THREE.WebGLRenderer({
             canvas: threeCanvas,
             antialias: true,
+            stencil: true // Enable stencil buffer for masking
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         
-        // No shadows needed for this new approach
-        // renderer.shadowMap.enabled = true;
-        // renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Create a black background to ensure no light leaks
+        const backgroundGeometry = new THREE.SphereGeometry(20, 32, 32);
+        const backgroundMaterial = new THREE.MeshBasicMaterial({
+            color: 0x000000,
+            side: THREE.BackSide
+        });
+        const background = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+        scene.add(background);
 
-        // All old lights are removed. The scene will be lit by the strobe effect.
+        // Create a group for the strobe effect components
+        strobeGroup = new THREE.Group();
+        scene.add(strobeGroup);
 
-        // Build the cylinder and casing
+        // Build the cylinder with cutouts
         createPatternedCylinder();
+        
+        // Create the outer casing
         createOuterCasing();
 
-        // Create an inner cylinder that will flash to create the strobe effect
-        const innerCylinderGeometry = new THREE.CylinderGeometry(1.9, 1.9, 5, 32);
-        const innerCylinderMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-        innerCylinder = new THREE.Mesh(innerCylinderGeometry, innerCylinderMaterial);
-        scene.add(innerCylinder);
-
-        // Post-processing for a more realistic glow
+        // Post-processing for a subtle glow
         const renderPass = new RenderPass(scene, camera);
         const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-        bloomPass.threshold = 0;
-        bloomPass.strength = 1.2; // Controlled strength
-        bloomPass.radius = 0.5;   // Tighter radius for less haze
+        bloomPass.threshold = 0.2; // Higher threshold to reduce bloom spread
+        bloomPass.strength = 0.6; // Reduced strength to contain the glow
+        bloomPass.radius = 0.2;   // Tighter radius for less haze
 
         composer = new EffectComposer(renderer);
         composer.addPass(renderPass);
@@ -175,30 +177,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const createPatternedCylinder = () => {
         if (cylinder) scene.remove(cylinder);
-
+        
         const radius = 2;
         const height = 5;
+        
+        // Create the cylinder with cutout patterns
         const geometry = new THREE.CylinderGeometry(radius, radius, height, 32, 1, true);
-
         const alphaMapTexture = createCylinderPatternTexture();
         alphaMapTexture.wrapS = THREE.RepeatWrapping;
         alphaMapTexture.wrapT = THREE.RepeatWrapping;
         alphaMapTexture.repeat.set(4, 1); // Repeat the texture 4 times horizontally
 
-        const material = new THREE.MeshStandardMaterial({
-            color: 0x000000, // Set cylinder color to pure black as requested
+        // Create the main cylinder with cutouts
+        const material = new THREE.MeshBasicMaterial({
+            color: 0x000000,
             alphaMap: alphaMapTexture,
             transparent: true,
-            alphaTest: 0.5, // Use alpha testing for sharp, binary cutouts
+            alphaTest: 0.5,
             side: THREE.DoubleSide,
-            metalness: 0.2,
-            roughness: 0.8,
         });
-
+        
         cylinder = new THREE.Mesh(geometry, material);
-        // cylinder.castShadow = true; // No shadows in this lighting model
-        // cylinder.receiveShadow = true; 
         scene.add(cylinder);
+
+        // Create a solid cylinder for the inner light source
+        const innerRadius = 1.9; // Slightly smaller than the main cylinder
+        const innerGeometry = new THREE.CylinderGeometry(innerRadius, innerRadius, height - 0.1, 32);
+        const innerMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x000000, // Start with black (off)
+            side: THREE.FrontSide
+        });
+        innerCylinder = new THREE.Mesh(innerGeometry, innerMaterial);
+        strobeGroup.add(innerCylinder);
+        
+        // Create a mask cylinder that will define where the light can be seen
+        // This will be used with the stencil buffer
+        const maskGeometry = new THREE.CylinderGeometry(radius, radius, height, 32, 1, true);
+        const maskMaterial = new THREE.MeshBasicMaterial({
+            colorWrite: false, // Don't write color, only affect the stencil buffer
+            depthWrite: false, // Don't write to depth buffer
+            stencilWrite: true, // Write to stencil buffer
+            stencilRef: 1,
+            stencilFunc: THREE.AlwaysStencilFunc,
+            stencilZPass: THREE.ReplaceStencilOp
+        });
+        
+        cylinderMask = new THREE.Mesh(maskGeometry, maskMaterial);
+        cylinderMask.renderOrder = 0; // Render first to set up stencil
+        strobeGroup.add(cylinderMask);
+        
+        // Configure the inner cylinder to only render where the stencil is set
+        innerMaterial.stencilWrite = true;
+        innerMaterial.stencilRef = 1;
+        innerMaterial.stencilFunc = THREE.EqualStencilFunc;
+        innerMaterial.stencilZPass = THREE.KeepStencilOp;
+        innerCylinder.renderOrder = 1; // Render after the mask
     };
 
     const createOuterCasing = () => {
@@ -206,10 +239,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const height = 5.5;
         const geometry = new THREE.CylinderGeometry(radius, radius, height, 64, 1, true);
 
+        // Make the outer casing more subtle
         const material = new THREE.MeshPhysicalMaterial({
             color: 0xffffff,
             transmission: 1.0, // Fully transparent like glass
-            opacity: 0.3,      // Slightly visible
+            opacity: 0.2,      // Very slightly visible
             metalness: 0,
             roughness: 0.05,   // Very smooth for clear reflections
             ior: 1.5,          // Index of refraction for glass
@@ -221,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
         scene.add(outerCasing);
     };
 
-
     const animateThree = () => {
         // This function is the single animation loop now
         if (!isRunning) return;
@@ -230,13 +263,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const rotationPerSecond = (2 * Math.PI * frequency) / slitCount;
         cylinder.rotation.y += rotationPerSecond * delta;
 
+        // Keep the mask and inner cylinder in sync with the main cylinder
+        if (cylinderMask) {
+            cylinderMask.rotation.y = cylinder.rotation.y;
+        }
+
         // --- Artificial Strobe Logic ---
         const anglePerSlit = (2 * Math.PI) / slitCount;
         const currentAngle = cylinder.rotation.y;
 
         // Check if we've crossed the threshold for a new slit to trigger a flash
         if (Math.floor(currentAngle / anglePerSlit) > Math.floor(lastFlickerAngle / anglePerSlit)) {
-            flashDuration = 2; // Set the flash to be active for 2 frames
+            // Adjust flash duration based on frequency
+            // Lower frequencies need longer flashes to be visible through the cutouts
+            if (frequency <= 3) {
+                flashDuration = 3; // Longer flash for very low frequencies
+            } else if (frequency <= 8) {
+                flashDuration = 2; // Medium flash for mid-low frequencies
+            } else if (frequency <= 10) {
+                flashDuration = 2; // Standard flash for medium frequencies
+            } else {
+                flashDuration = 1; // Short flash for high frequencies
+            }
         }
         lastFlickerAngle = currentAngle;
 
@@ -247,6 +295,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             innerCylinder.material.color.set(0x000000); // Return inner cylinder to black
         }
+        
+        // Clear the stencil buffer before rendering
+        renderer.clear(false, false, true);
         
         // Render the scene via the composer to apply post-processing effects
         composer.render();
@@ -362,6 +413,8 @@ document.addEventListener('DOMContentLoaded', () => {
         composer = null; // Ensure composer is nulled
         cylinder = null;
         innerCylinder = null;
+        cylinderMask = null;
+        strobeGroup = null;
 
         // Ensure 3D canvas is hidden
         threeCanvas.classList.add('hidden');
@@ -445,12 +498,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (scene && camera && renderer) {
             camera.aspect = window.innerWidth / window.innerHeight;
             
-            // Adjust camera position based on screen width when resizing
-            if (window.innerWidth <= 768) {
-                camera.position.z = 5.0; // Further away on mobile for less zoom
-            } else {
-                camera.position.z = 3.5; // Closer on desktop for immersive feel
-            }
+            // Use the same camera position for all screen sizes
+            camera.position.z = 5.0;
             
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
