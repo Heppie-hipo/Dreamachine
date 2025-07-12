@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 </head>
 <body>
+    <div id="vanta-bg"></div>
     <div id="onboarding-container">
         <!-- Step 1: Welcome -->
         <div id="welcome-screen" class="onboarding-step active">
@@ -17,6 +18,7 @@
                 <h1 class="onboarding-title">Welcome to the Dreamachine</h1>
                 <p class="onboarding-text">A journey inward, through flicker, light, and sound.</p>
                 <p class="onboarding-text">Inspired by Brion Gysin's original invention, this digital Dreamachine is an eyes-closed experience that uses rhythmic light and sound to stimulate altered states of consciousness. What you see inside — is your own mind.</p>
+                <p class="onboarding-quote">"The Dreamachine is the first artwork to be experienced with the eyes closed."<br>— Brion Gysin</p>
                 <button id="welcome-continue-btn" class="onboarding-button">Continue</button>
             </div>
         </div>
@@ -50,7 +52,6 @@
                 </ul>
                 <h3 class="onboarding-subtitle">Begin When You Are Ready</h3>
                 <p class="onboarding-text">You are about to enter a world that isn't rendered — it's revealed.<br>Not from the screen — but from the deep architecture of your own mind.</p>
-                <p class="onboarding-quote">"The Dreamachine is the first artwork to be experienced with the eyes closed."<br>— Brion Gysin</p>
                 <button id="begin-experience-btn" class="onboarding-button">Begin Experience</button>
             </div>
         </div>
@@ -81,6 +82,108 @@
     <div id="exit-message" class="hidden">
         <p>Thank you for using the Dreamachine. Come back soon.</p>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
+    <script>
+        const palettes = [
+            { highlight: 0xff0077, midtone: 0xd500f9, lowlight: 0x651fff }, // Deep Purple/Pink
+            { highlight: 0x00e5ff, midtone: 0x00b0ff, lowlight: 0x2962ff }, // Ocean Blue
+            { highlight: 0xeeff41, midtone: 0x64dd17, lowlight: 0x00bfa5 }, // Jungle Green
+            { highlight: 0xff9100, midtone: 0xff3d00, lowlight: 0xd50000 }, // Sunset Orange/Red
+            { highlight: 0xbe93fd, midtone: 0x9b59b6, lowlight: 0x4a235a }, // Mystic Violet
+            { highlight: 0xfdd835, midtone: 0xffb300, lowlight: 0xf57c00 }, // Sunrise
+            { highlight: 0x42f5b9, midtone: 0x2196f3, lowlight: 0x3f51b5 }, // Aurora
+            { highlight: 0x69f0ae, midtone: 0x00c853, lowlight: 0x004d40 }, // Enchanted Forest
+            { highlight: 0xe1bee7, midtone: 0xba68c8, lowlight: 0x8e24aa }, // Cosmic Lilac
+            { highlight: 0xff5252, midtone: 0xff1744, lowlight: 0x448aff }, // Fire and Ice
+            { highlight: 0xffecb3, midtone: 0xffd54f, lowlight: 0xff8f00 }, // Golden Haze
+            { highlight: 0x4dd0e1, midtone: 0x00bcd4, lowlight: 0x006064 }, // Deep Sea
+            { highlight: 0xf8bbd0, midtone: 0xf06292, lowlight: 0xc2185b }, // Raspberry Sorbet
+            { highlight: 0xa5d6a7, midtone: 0x66bb6a, lowlight: 0x1b5e20 }, // Emerald City
+            { highlight: 0xd1c4e9, midtone: 0x9575cd, lowlight: 0x4527a0 }, // Lavender Sky
+            { highlight: 0xb0bec5, midtone: 0x78909c, lowlight: 0x37474f }, // Volcanic Ash
+            { highlight: 0xffab91, midtone: 0xff7043, lowlight: 0xe64a19 }, // Coral Reef
+            { highlight: 0xc5cae9, midtone: 0x7986cb, lowlight: 0x283593 }, // Winter Night
+            { highlight: 0xffe0b2, midtone: 0xffb74d, lowlight: 0xef6c00 }, // Desert Sands
+            { highlight: 0x9fa8da, midtone: 0x5c6bc0, lowlight: 0x1a237e }  // Galactic Glow
+        ];
+
+        let currentPaletteIndex = 0;
+
+        let vantaEffect = VANTA.FOG({
+            el: "#vanta-bg",
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.00,
+            minWidth: 200.00,
+            highlightColor: palettes[0].highlight,
+            midtoneColor: palettes[0].midtone,
+            lowlightColor: palettes[0].lowlight,
+            baseColor: 0x0,
+            blurFactor: 0.50,
+            speed: 1.20,
+            zoom: 1.50
+        });
+
+        function hexToRgb(hex) {
+            const r = (hex >> 16) & 255;
+            const g = (hex >> 8) & 255;
+            const b = hex & 255;
+            return { r, g, b };
+        }
+
+        function rgbToHex(r, g, b) {
+            return (r << 16) + (g << 8) + b;
+        }
+
+        function interpolateColor(color1, color2, factor) {
+            const rgb1 = hexToRgb(color1);
+            const rgb2 = hexToRgb(color2);
+            const r = Math.round(rgb1.r + factor * (rgb2.r - rgb1.r));
+            const g = Math.round(rgb1.g + factor * (rgb2.g - rgb1.g));
+            const b = Math.round(rgb1.b + factor * (rgb2.b - rgb1.b));
+            return rgbToHex(r, g, b);
+        }
+
+        function transitionToNextPalette() {
+            if (!vantaEffect) return;
+
+            const fromPalette = palettes[currentPaletteIndex];
+            currentPaletteIndex = (currentPaletteIndex + 1) % palettes.length;
+            const toPalette = palettes[currentPaletteIndex];
+
+            const duration = 2000; // 2 seconds for transition
+            let startTime = null;
+
+            function animate(currentTime) {
+                if (!startTime) startTime = currentTime;
+                const elapsedTime = currentTime - startTime;
+                const progress = Math.min(elapsedTime / duration, 1);
+
+                vantaEffect.setOptions({
+                    highlightColor: interpolateColor(fromPalette.highlight, toPalette.highlight, progress),
+                    midtoneColor: interpolateColor(fromPalette.midtone, toPalette.midtone, progress),
+                    lowlightColor: interpolateColor(fromPalette.lowlight, toPalette.lowlight, progress),
+                });
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+        
+        // Use a recursive timeout to ensure consistent timing between transitions.
+        function scheduleNextTransition() {
+            transitionToNextPalette();
+            setTimeout(scheduleNextTransition, 4000); // 2s transition + 2s pause = 4s interval
+        }
+
+        // Start the transitions after a brief initial pause.
+        setTimeout(scheduleNextTransition, 100);
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.min.js"></script>
     <script type="module" src="script.js"></script>
 </body>

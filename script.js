@@ -40,12 +40,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let scene, camera, renderer, composer, cylinder, clock, innerCylinder;
     let strobeGroup, cylinderMask;
 
+    // --- New Flash Color Palette ---
+    const flashColors = [
+        new THREE.Color(0xff00ff), // Magenta
+        new THREE.Color(0x00ffff), // Cyan
+        new THREE.Color(0xffff00), // Yellow
+        new THREE.Color(0xff0077), // Deep Pink
+        new THREE.Color(0x00ff77), // Spring Green
+        new THREE.Color(0x7700ff), // Electric Violet
+        new THREE.Color(0xff7700), // Orange
+        new THREE.Color(0x0077ff), // Azure Blue
+        new THREE.Color(0xccff00), // Lime
+        new THREE.Color(0xffcc00), // Gold
+    ];
+    let currentFlashColor = flashColors[0];
+
     // --- Audio Engine (Tone.js) ---
+    const analyser = new Tone.Analyser('fft', 256);
     const player = new Tone.Player({
         url: "Audio/Repetition- Max Cooper.m4a",
         loop: true,
         fadeOut: 2,
-    }).toDestination();
+    }).fan(analyser).toDestination();
 
     // --- New Three.js Engine ---
     const initThree = () => {
@@ -274,6 +290,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check if we've crossed the threshold for a new slit to trigger a flash
         if (Math.floor(currentAngle / anglePerSlit) > Math.floor(lastFlickerAngle / anglePerSlit)) {
+            // Pick a new random color for the flash
+            currentFlashColor = flashColors[Math.floor(Math.random() * flashColors.length)];
+
             // Adjust flash duration based on frequency
             // Lower frequencies need longer flashes to be visible through the cutouts
             if (frequency <= 3) {
@@ -290,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Execute the flash
         if (flashDuration > 0) {
-            innerCylinder.material.color.set(0xFFE082); // Flash a warmer yellow
+            innerCylinder.material.color.set(currentFlashColor); // Use the new dynamic color
             flashDuration--;
         } else {
             innerCylinder.material.color.set(0x000000); // Return inner cylinder to black
@@ -367,6 +386,10 @@ document.addEventListener('DOMContentLoaded', () => {
         threeCanvas.style.display = 'block';
 
         if (!scene) initThree(); // Initialize Three.js scene if not already
+        
+        // THIS IS THE FIX: Set initial canvas sizes correctly right after init
+        onWindowResize(); 
+        
         animationFrameId = requestAnimationFrame(animateThree); // Start 3D animation loop
 
         // Start the audio and transport
@@ -432,6 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Audio context started');
         onboardingContainer.classList.add('hidden'); // Hide the whole onboarding flow
         dreamachineContainer.classList.remove('hidden');
+        
         window.addEventListener('resize', onWindowResize);
         setupActivityListeners();
         startInactivityTimer(); // Start the timer immediately

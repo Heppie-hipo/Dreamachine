@@ -24,6 +24,15 @@ body {
     overflow: hidden; /* Prevent scrolling during experience */
 }
 
+#vanta-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
 /* ---
     Onboarding Experience Styling (Mobile-First)
 --- */
@@ -93,6 +102,7 @@ body {
     font-weight: 600;
     color: var(--primary-color);
     line-height: 1.2;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .onboarding-subtitle {
@@ -106,6 +116,7 @@ body {
 .onboarding-text {
     font-size: 1rem; /* Reduced for mobile */
     color: var(--text-color);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .onboarding-quote {
@@ -113,6 +124,7 @@ body {
     font-style: italic;
     color: var(--secondary-color);
     margin-top: 0.8rem;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .disclaimer-list, .preparation-list {
@@ -310,7 +322,7 @@ canvas {
         overflow-y: hidden; /* Disable scrolling on larger screens */
         padding: 0; /* Remove padding on desktop */
     }
-    
+
     .onboarding-step {
         max-width: 600px;
         padding: 2rem;
