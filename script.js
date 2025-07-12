@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let soundEnabled = true;
     let inactivityTimer;
     let controlsVisible = true;
-    let slitCount = 16;
+    let slitCount = 12; // Reduced from 16 to 12
     
     // --- Mobile Detection ---
     const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -49,34 +49,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Music Player State ---
     const audioTracks = [
         { path: "Audio/Repetition- Max Cooper.m4a", name: "Repetition- Max Cooper.m4a" },
-        { path: "Audio/Order From Chaos- Max Cooper.m4a", name: "Order From Chaos- Max Cooper.m4a" },
         { path: "Audio/Circular- Max Cooper.m4a", name: "Circular- Max Cooper.m4a" },
-        { path: "Audio/Symmetry- Max Cooper Tom Hodge.m4a", name: "Symmetry- Max Cooper Tom Hodge.m4a" },
-        { path: "Audio/#3- Aphex Twin.m4a", name: "#3- Aphex Twin.m4a" },
         { path: "Audio/#19- Aphex Twin.m4a", name: "#19- Aphex Twin.m4a" },
         { path: "Audio/A Drifting Up- Jon Hopkins.m4a", name: "A Drifting Up- Jon Hopkins.m4a" },
         { path: "Audio/A Fleeting Life feat James Yorkston- Max Cooper.m4a", name: "A Fleeting Life feat James Yorkston- Max Cooper.m4a" },
-        { path: "Audio/Aleph 2- Max Cooper.m4a", name: "Aleph 2- Max Cooper.m4a" },
         { path: "Audio/Candles- Jon Hopkins.m4a", name: "Candles- Jon Hopkins.m4a" },
         { path: "Audio/Chromos- Max Cooper.m4a", name: "Chromos- Max Cooper.m4a" },
-        { path: "Audio/Fission- Ludwig G ransson.m4a", name: "Fission- Ludwig G ransson.m4a" },
         { path: "Audio/Four Tone Reflections- Max Cooper.m4a", name: "Four Tone Reflections- Max Cooper.m4a" },
-        { path: "Audio/Heptapod B- J hann J hannsson.m4a", name: "Heptapod B- J hann J hannsson.m4a" },
-        { path: "Audio/Home- Ftbn.m4a", name: "Home- Ftbn.m4a" },
         { path: "Audio/Hope- Max Cooper.m4a", name: "Hope- Max Cooper.m4a" },
-        { path: "Audio/Identity- Max Cooper.m4a", name: "Identity- Max Cooper.m4a" },
         { path: "Audio/Impermanence feat Kathrin Deboer- Max Cooper.m4a", name: "Impermanence feat Kathrin Deboer- Max Cooper.m4a" },
         { path: "Audio/In Pursuit Of Ghosts- Max Cooper Tom Hodge.m4a", name: "In Pursuit Of Ghosts- Max Cooper Tom Hodge.m4a" },
-        { path: "Audio/In The Water from surface- lafur Arnalds.m4a", name: "In The Water from surface- lafur Arnalds.m4a" },
         { path: "Audio/Leaving This Place- Max Cooper.m4a", name: "Leaving This Place- Max Cooper.m4a" },
         { path: "Audio/Let There Be- Max Cooper.m4a", name: "Let There Be- Max Cooper.m4a" },
         { path: "Audio/Luminous Beings- Jon Hopkins.m4a", name: "Luminous Beings- Jon Hopkins.m4a" },
-        { path: "Audio/Memories- Max Cooper.m4a", name: "Memories- Max Cooper.m4a" },
         { path: "Audio/On Being- Max Cooper Felix Gerbelot.m4a", name: "On Being- Max Cooper Felix Gerbelot.m4a" },
         { path: "Audio/Porous Space feat Samad Khan- Max Cooper.m4a", name: "Porous Space feat Samad Khan- Max Cooper.m4a" },
-        { path: "Audio/Says- Nils Frahm.m4a", name: "Says- Nils Frahm.m4a" },
         { path: "Audio/Stereoscopic Dive- Max Cooper.m4a", name: "Stereoscopic Dive- Max Cooper.m4a" },
-        { path: "Audio/Swarm- Max Cooper.m4a", name: "Swarm- Max Cooper.m4a" },
         { path: "Audio/The Missing Piece- Max Cooper.m4a", name: "The Missing Piece- Max Cooper.m4a" },
         { path: "Audio/Transcendental Tree Map- Max Cooper.m4a", name: "Transcendental Tree Map- Max Cooper.m4a" },
         { path: "Audio/Untitled I live At The Acropolis- Max Cooper.m4a", name: "Untitled I live At The Acropolis- Max Cooper.m4a" },
@@ -307,7 +295,13 @@ document.addEventListener('DOMContentLoaded', () => {
         scene.background = new THREE.Color(0x000000);
         clock = new THREE.Clock();
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 0, 5.0);
+        
+        // Adjust camera position based on device type - zoom out slightly for mobile
+        if (isMobile()) {
+            camera.position.set(0, 0, 5.3); // Slightly further back for mobile
+        } else {
+            camera.position.set(0, 0, 5.0); // Standard distance for desktop
+        }
         
         renderer = new THREE.WebGLRenderer({ 
             canvas: threeCanvas, 
@@ -364,8 +358,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Set cutout color to black (this is what's visible)
         ctx.fillStyle = 'black';
 
-        const numRows = 8;
-        const numCols = 4;
+        // Increased number of rows from 4 to 6
+        const numRows = 6;
+        // Reduced number of columns from 4 to 3
+        const numCols = 3;
         const cellWidth = canvas.width / numCols;
         const cellHeight = canvas.height / numRows;
         const padding = 20;
@@ -416,11 +412,11 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         };
 
+        // Reduced number of shapes from 4 to 3, removed the triangle
         const shapes = [
             (cx, cy, s) => drawPolygon(cx, cy, 6, s), // Hexagon
             (cx, cy, s) => drawStar(cx, cy, 5, s, s / 2), // 5-point star
             (cx, cy, s) => drawCircle(cx, cy, s * 0.9), // Circle
-            (cx, cy, s) => drawPolygon(cx, cy, 3, s, Math.PI / 2), // Triangle
         ];
 
         for (let r = 0; r < numRows; r++) {
