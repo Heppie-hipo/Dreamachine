@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+yes<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -8,9 +8,87 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div id="vanta-bg"></div>
+    
+    <!-- Sidebar Toggle Button - Visible in onboarding, hidden during experience -->
+    <button id="sidebar-toggle">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <button id="sidebar-close"><i class="fas fa-times"></i></button>
+        <div class="sidebar-content">
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <h3>About Dreamachine</h3>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="sidebar-body">
+                    <p>The Dreamachine is a device that produces visual stimuli to create an altered state of consciousness. It was created by artist Brion Gysin and scientist Ian Sommerville.</p>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <h3>How It Works</h3>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="sidebar-body">
+                    <p>The stroboscopic flicker effect causes neural oscillations in the brain to synchronize with the rhythm of the flashing light, producing a "frequency following response" that can lead to hypnagogic experiences.</p>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <h3>History</h3>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="sidebar-body">
+                    <p>First designed in 1957, the Dreamachine was inspired by the observations of scientists who noticed that patients experienced hallucinations when they closed their eyes and faced sunlight while passing rows of trees.</p>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <h3>Scientific Background</h3>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="sidebar-body">
+                    <p>The principle behind the Dreamachine relates to how the brain processes rhythmic visual stimulation. Specific frequencies (particularly around 8-13 Hz) can induce alpha and theta brainwaves associated with relaxation and dreamlike states.</p>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <h3>Tips</h3>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="sidebar-body">
+                    <p>For the best experience, use the Dreamachine in a dark room. Keep your eyes closed and face the light source. Adjust the frequency to find what works best for your mind.</p>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <h3>About This Project</h3>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="sidebar-body">
+                    <p>This project is a personal exploration of consciousness — built for those drawn to altered states, inner vision, and the subtle edges of perception.</p>
+                    <p>Inspired by the original Dreamachine concept by Brion Gysin and Ian Sommerville, this version isn't a replica — it's a reimagining. A digital experiment in rhythm, light, and mind. It lives in the browser, works with any screen, and is made to be accessible to anyone curious enough to try.</p>
+                    <p>This isn't a product. It's not for profit or attention. It's a tool, a ritual, a visual pulse meant to guide you toward that liminal space — between waking and dreaming, between noise and stillness.</p>
+                    <p>Not everyone will connect with it. And that's okay.<br>It's for the psychonauts, the lucid dreamers, the ones who seek what can't quite be described.</p>
+                    <p>If that's you — welcome.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div id="onboarding-container">
         <!-- Step 1: Welcome -->
         <div id="welcome-screen" class="onboarding-step active">
@@ -64,15 +142,19 @@
             <div class="control-group frequency-slider-group">
                 <label for="freq-slider">Frequency</label>
                 <input type="range" min="0" max="3" value="1" id="freq-slider">
-                <span id="hz-value">8.0 Hz</span>
+                <span id="hz-value">10.0 Hz</span>
             </div>
+            
+            <!-- Music Player Controls -->
+            <div class="control-group music-control-group">
+                <button id="next-track" class="music-button">
+                    Change Track
+                </button>
+            </div>
+            
             <div class="control-group">
                 <label for="sound-toggle">Sound</label>
                 <button id="sound-toggle" class="control-button">On</button>
-            </div>
-            <div class="control-group">
-                <label for="mode-select">Mode</label>
-                <span class="mode-display">Classic</span>
             </div>
             <div class="control-group">
                 <button id="exit-button" class="control-button exit">Exit</button>

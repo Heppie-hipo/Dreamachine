@@ -21,381 +21,502 @@ document.addEventListener('DOMContentLoaded', () => {
     const hzValue = document.getElementById('hz-value');
     const soundToggle = document.getElementById('sound-toggle');
     const exitButton = document.getElementById('exit-button');
-    const exitMessage = document.getElementById('exit-message');
     const controls = document.getElementById('controls');
     const freqSlider = document.getElementById('freq-slider');
+    
+    // --- Sidebar Elements ---
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarClose = document.getElementById('sidebar-close');
+    const sidebarHeaders = document.querySelectorAll('.sidebar-header');
+    
+    // --- Music Player Elements ---
+    const nextTrackBtn = document.getElementById('next-track');
 
     // State
     const frequencies = [3, 8, 10, 18];
     let animationFrameId;
     let isRunning = false;
-    let frequency = 8; // Default Hz, scientifically relevant
+    let frequency = 8;
     let soundEnabled = true;
     let inactivityTimer;
     let controlsVisible = true;
-    let slitCount = 16; // Set to 16 to match the number of columns in the texture pattern (4 columns * 4 repeats)
-    let frameRate = 60; // Assumed frame rate
+    let slitCount = 16;
+    
+    // --- Mobile Detection ---
+    const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    // --- Music Player State ---
+    const audioTracks = [
+        { path: "Audio/Repetition- Max Cooper.m4a", name: "Repetition- Max Cooper.m4a" },
+        { path: "Audio/Order From Chaos- Max Cooper.m4a", name: "Order From Chaos- Max Cooper.m4a" },
+        { path: "Audio/Circular- Max Cooper.m4a", name: "Circular- Max Cooper.m4a" },
+        { path: "Audio/Symmetry- Max Cooper Tom Hodge.m4a", name: "Symmetry- Max Cooper Tom Hodge.m4a" },
+        { path: "Audio/#3- Aphex Twin.m4a", name: "#3- Aphex Twin.m4a" },
+        { path: "Audio/#19- Aphex Twin.m4a", name: "#19- Aphex Twin.m4a" },
+        { path: "Audio/A Drifting Up- Jon Hopkins.m4a", name: "A Drifting Up- Jon Hopkins.m4a" },
+        { path: "Audio/A Fleeting Life feat James Yorkston- Max Cooper.m4a", name: "A Fleeting Life feat James Yorkston- Max Cooper.m4a" },
+        { path: "Audio/Aleph 2- Max Cooper.m4a", name: "Aleph 2- Max Cooper.m4a" },
+        { path: "Audio/Candles- Jon Hopkins.m4a", name: "Candles- Jon Hopkins.m4a" },
+        { path: "Audio/Chromos- Max Cooper.m4a", name: "Chromos- Max Cooper.m4a" },
+        { path: "Audio/Fission- Ludwig G ransson.m4a", name: "Fission- Ludwig G ransson.m4a" },
+        { path: "Audio/Four Tone Reflections- Max Cooper.m4a", name: "Four Tone Reflections- Max Cooper.m4a" },
+        { path: "Audio/Heptapod B- J hann J hannsson.m4a", name: "Heptapod B- J hann J hannsson.m4a" },
+        { path: "Audio/Home- Ftbn.m4a", name: "Home- Ftbn.m4a" },
+        { path: "Audio/Hope- Max Cooper.m4a", name: "Hope- Max Cooper.m4a" },
+        { path: "Audio/Identity- Max Cooper.m4a", name: "Identity- Max Cooper.m4a" },
+        { path: "Audio/Impermanence feat Kathrin Deboer- Max Cooper.m4a", name: "Impermanence feat Kathrin Deboer- Max Cooper.m4a" },
+        { path: "Audio/In Pursuit Of Ghosts- Max Cooper Tom Hodge.m4a", name: "In Pursuit Of Ghosts- Max Cooper Tom Hodge.m4a" },
+        { path: "Audio/In The Water from surface- lafur Arnalds.m4a", name: "In The Water from surface- lafur Arnalds.m4a" },
+        { path: "Audio/Leaving This Place- Max Cooper.m4a", name: "Leaving This Place- Max Cooper.m4a" },
+        { path: "Audio/Let There Be- Max Cooper.m4a", name: "Let There Be- Max Cooper.m4a" },
+        { path: "Audio/Luminous Beings- Jon Hopkins.m4a", name: "Luminous Beings- Jon Hopkins.m4a" },
+        { path: "Audio/Memories- Max Cooper.m4a", name: "Memories- Max Cooper.m4a" },
+        { path: "Audio/On Being- Max Cooper Felix Gerbelot.m4a", name: "On Being- Max Cooper Felix Gerbelot.m4a" },
+        { path: "Audio/Porous Space feat Samad Khan- Max Cooper.m4a", name: "Porous Space feat Samad Khan- Max Cooper.m4a" },
+        { path: "Audio/Says- Nils Frahm.m4a", name: "Says- Nils Frahm.m4a" },
+        { path: "Audio/Stereoscopic Dive- Max Cooper.m4a", name: "Stereoscopic Dive- Max Cooper.m4a" },
+        { path: "Audio/Swarm- Max Cooper.m4a", name: "Swarm- Max Cooper.m4a" },
+        { path: "Audio/The Missing Piece- Max Cooper.m4a", name: "The Missing Piece- Max Cooper.m4a" },
+        { path: "Audio/Transcendental Tree Map- Max Cooper.m4a", name: "Transcendental Tree Map- Max Cooper.m4a" },
+        { path: "Audio/Untitled I live At The Acropolis- Max Cooper.m4a", name: "Untitled I live At The Acropolis- Max Cooper.m4a" },
+        { path: "Audio/Untitled III live At The Acropolis- Max Cooper.m4a", name: "Untitled III live At The Acropolis- Max Cooper.m4a" }
+    ];
+    let shuffledQueue = [];
+    let queuePosition = 0;
+    
+    // --- Audio Engine ---
+    const players = new Map(); // Using a Map to manage players manually
+    let isAudioReady = false;
+    let currentPlayerKey = null;
+    let hasUserInteracted = false; // Track if user has interacted for mobile audio
 
     // --- Three.js State ---
-    let scene, camera, renderer, composer, cylinder, clock, innerCylinder;
-    let strobeGroup, cylinderMask;
+    let scene, camera, renderer, composer, cylinder, clock, innerCylinder, strobeGroup;
 
-    // --- New Flash Color Palette ---
+    // --- Flash Color Palette ---
     const flashColors = [
-        new THREE.Color(0xff00ff), // Magenta
-        new THREE.Color(0x00ffff), // Cyan
-        new THREE.Color(0xffff00), // Yellow
-        new THREE.Color(0xff0077), // Deep Pink
-        new THREE.Color(0x00ff77), // Spring Green
-        new THREE.Color(0x7700ff), // Electric Violet
-        new THREE.Color(0xff7700), // Orange
-        new THREE.Color(0x0077ff), // Azure Blue
-        new THREE.Color(0xccff00), // Lime
-        new THREE.Color(0xffcc00), // Gold
+        new THREE.Color(0xff00ff), new THREE.Color(0x00ffff), new THREE.Color(0xffff00),
+        new THREE.Color(0xff0077), new THREE.Color(0x00ff77), new THREE.Color(0x7700ff),
+        new THREE.Color(0xff7700), new THREE.Color(0x0077ff), new THREE.Color(0xccff00),
+        new THREE.Color(0xffcc00),
     ];
     let currentFlashColor = flashColors[0];
 
-    // --- Audio Engine (Tone.js) ---
+    // --- Audio Analyser ---
     const analyser = new Tone.Analyser('fft', 256);
-    const player = new Tone.Player({
-        url: "Audio/Repetition- Max Cooper.m4a",
-        loop: true,
-        fadeOut: 2,
-    }).fan(analyser).toDestination();
+    // Each player will be connected to the analyser individually
 
-    // --- New Three.js Engine ---
+    // --- Add Ripple Effect to Next Track Button ---
+    const addRippleEffect = (button) => {
+        button.addEventListener('click', function(e) {
+            const ripple = document.createElement('span');
+            const rect = button.getBoundingClientRect();
+            
+            const size = Math.max(rect.width, rect.height) * 2;
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background-color: rgba(255, 255, 255, 0.4);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s linear forwards;
+                pointer-events: none;
+            `;
+            
+            button.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    };
+    
+    // --- Add Touch-specific Ripple Effect ---
+    const addTouchRippleEffect = (button) => {
+        button.addEventListener('touchstart', function(e) {
+            const ripple = document.createElement('span');
+            const rect = button.getBoundingClientRect();
+            
+            // Get touch position
+            const touch = e.touches[0];
+            const size = Math.max(rect.width, rect.height) * 2;
+            const x = touch.clientX - rect.left - size / 2;
+            const y = touch.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background-color: rgba(255, 255, 255, 0.4);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s linear forwards;
+                pointer-events: none;
+            `;
+            
+            button.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        }, { passive: true });
+    };
+
+    const generateShuffleQueue = () => {
+        // Always start with Repetition by Max Cooper
+        const firstTrack = audioTracks.find(t => t.name === "Repetition- Max Cooper.m4a");
+        let restOfTracks = audioTracks.filter(t => t.name !== "Repetition- Max Cooper.m4a");
+
+        for (let i = restOfTracks.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [restOfTracks[i], restOfTracks[j]] = [restOfTracks[j], restOfTracks[i]];
+        }
+        shuffledQueue = [firstTrack, ...restOfTracks].filter(Boolean); // Filter out potential undefined values
+    };
+    
+    const preloadTrack = (trackIndex) => {
+        // Handle wrapping around the queue for continuous playback
+        let normalizedIndex = trackIndex;
+        if (trackIndex >= shuffledQueue.length) {
+            normalizedIndex = trackIndex % shuffledQueue.length;
+        }
+        
+        const trackToLoad = shuffledQueue[normalizedIndex];
+        if (trackToLoad && !players.has(trackToLoad.name)) {
+            // Use a placeholder to prevent re-triggering the download
+            players.set(trackToLoad.name, { status: 'loading', player: null, blobUrl: null });
+            
+            console.log(`Fetching track for preloading: ${trackToLoad.name}`);
+            fetch(trackToLoad.path)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const blobUrl = URL.createObjectURL(blob);
+                    const player = new Tone.Player(blobUrl, () => {
+                        console.log(`Preloaded and ready: ${trackToLoad.name}`);
+                        players.set(trackToLoad.name, { status: 'loaded', player: player, blobUrl: blobUrl });
+                    }).toDestination();
+                    player.connect(analyser);
+                })
+                .catch(e => {
+                    console.error("Error preloading track with fetch:", e);
+                    // Remove the placeholder so it can be tried again
+                    players.delete(trackToLoad.name);
+                });
+        }
+    };
+    
+    const switchTrack = (newPosition) => {
+        const now = Tone.now();
+
+        // Stop current track if it exists
+        if (currentPlayerKey && players.has(currentPlayerKey)) {
+            const currentTrackData = players.get(currentPlayerKey);
+            if (currentTrackData && currentTrackData.player) {
+                currentTrackData.player.fadeOut = 0.5;
+                currentTrackData.player.stop(now + 0.5);
+            }
+        }
+
+        // --- Memory Management: Dispose of old players and revoke Blob URLs ---
+        const keyToDisposeIndex = (newPosition - 2 + shuffledQueue.length) % shuffledQueue.length;
+        const trackToDispose = shuffledQueue[keyToDisposeIndex];
+
+        if (trackToDispose && players.has(trackToDispose.name)) {
+            const trackDataToDispose = players.get(trackToDispose.name);
+            if (trackDataToDispose && trackDataToDispose.status === 'loaded') {
+                console.log(`Disposing of track to save memory: ${trackToDispose.name}`);
+                if (trackDataToDispose.player) {
+                    trackDataToDispose.player.dispose();
+                }
+                if (trackDataToDispose.blobUrl) {
+                    URL.revokeObjectURL(trackDataToDispose.blobUrl);
+                }
+                players.delete(trackToDispose.name);
+            }
+        }
+        // --- End Memory Management ---
+
+        queuePosition = newPosition;
+        const newTrack = shuffledQueue[queuePosition];
+        if (!newTrack) {
+            console.error(`Track at position ${queuePosition} not found.`);
+            return;
+        }
+        currentPlayerKey = newTrack.name;
+        updateTrackDisplay();
+
+        // Preload the next track
+        preloadTrack(queuePosition + 1);
+
+        const playTrack = () => {
+            const trackData = players.get(currentPlayerKey);
+
+            if (trackData && trackData.status === 'loaded' && trackData.player) {
+                // Player is fully loaded and ready
+                if (soundEnabled && isRunning) {
+                    trackData.player.fadeIn = 0.5;
+                    trackData.player.loop = true;
+                    trackData.player.start(now);
+                    console.log("Started playing preloaded track:", currentPlayerKey);
+                }
+            } else if (trackData && trackData.status === 'loading') {
+                // The track is currently being fetched, wait for it to load
+                console.log("Track is still loading, waiting to play...", currentPlayerKey);
+                // We'll rely on the onload callback in preloadTrack to handle playback
+                // Or we can implement a more robust polling/event system here if needed
+                setTimeout(() => playTrack(), 300); // Check again shortly
+            } else {
+                // Track not found, start preloading it now
+                console.log("Track not found, initiating on-demand load:", currentPlayerKey);
+                preloadTrack(queuePosition); // This will trigger the fetch
+                setTimeout(() => playTrack(), 300); // Check again shortly
+            }
+        };
+        
+        playTrack();
+    };
+    
+    const playNextTrack = () => {
+        let newPosition = queuePosition + 1;
+        if (newPosition >= shuffledQueue.length) {
+            newPosition = 0;
+        }
+        switchTrack(newPosition);
+    };
+    
+    const updateTrackDisplay = () => {
+        // Track display removed, no longer showing track numbers
+    };
+
     const initThree = () => {
-        // Scene
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000000); // Set background to pure black
+        scene.background = new THREE.Color(0x000000);
         clock = new THREE.Clock();
-
-        // Camera - Position based on screen size for better mobile experience
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
-        // Adjust camera position to match mobile view on all screen sizes
-        // This will show 4 complete columns with just a bit on the edges
         camera.position.set(0, 0, 5.0);
-        camera.lookAt(0, 0, 0);
-
-        // Renderer with stencil buffer enabled for masking
-        renderer = new THREE.WebGLRenderer({
-            canvas: threeCanvas,
-            antialias: true,
-            stencil: true // Enable stencil buffer for masking
-        });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         
-        // Create a black background to ensure no light leaks
-        const backgroundGeometry = new THREE.SphereGeometry(20, 32, 32);
-        const backgroundMaterial = new THREE.MeshBasicMaterial({
-            color: 0x000000,
-            side: THREE.BackSide
+        renderer = new THREE.WebGLRenderer({ 
+            canvas: threeCanvas, 
+            antialias: false,
+            powerPreference: "high-performance",
+            alpha: false,
+            stencil: false,
+            depth: false,
         });
-        const background = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+        
+        const maxPixelRatio = isMobile() ? 1.5 : 2;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        const background = new THREE.Mesh(new THREE.SphereGeometry(20, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide }));
         scene.add(background);
 
-        // Create a group for the strobe effect components
         strobeGroup = new THREE.Group();
         scene.add(strobeGroup);
 
-        // Build the cylinder with cutouts
-        createPatternedCylinder();
+        const cylinderGeo = new THREE.CylinderGeometry(2, 2, 5, 32, 1, true);
+        const alphaMapTexture = createCylinderPatternTexture();
+        alphaMapTexture.wrapS = THREE.RepeatWrapping;
+        alphaMapTexture.repeat.set(4, 1);
+        const cylinderMat = new THREE.MeshBasicMaterial({ color: 0x000000, alphaMap: alphaMapTexture, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
+        cylinder = new THREE.Mesh(cylinderGeo, cylinderMat);
+        scene.add(cylinder);
+
+        const innerGeo = new THREE.CylinderGeometry(1.9, 1.9, 4.9, 32);
+        const innerMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.FrontSide });
+        innerCylinder = new THREE.Mesh(innerGeo, innerMat);
+        strobeGroup.add(innerCylinder);
         
-        // Create the outer casing
-        createOuterCasing();
+        const outerCasing = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 5.5, 64, 1, true), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: 1.0, opacity: 0.2, metalness: 0, roughness: 0.05, ior: 1.5, transparent: true, side: THREE.DoubleSide }));
+        scene.add(outerCasing);
 
-        // Post-processing for a subtle glow
         const renderPass = new RenderPass(scene, camera);
-        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-        bloomPass.threshold = 0.2; // Higher threshold to reduce bloom spread
-        bloomPass.strength = 0.6; // Reduced strength to contain the glow
-        bloomPass.radius = 0.2;   // Tighter radius for less haze
-
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.2, 0.2);
         composer = new EffectComposer(renderer);
         composer.addPass(renderPass);
         composer.addPass(bloomPass);
     };
 
-    let lastFlickerAngle = 0;
-    let flashDuration = 0; // How many frames the flash should last
-
     const createCylinderPatternTexture = () => {
         const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 1024;
         const ctx = canvas.getContext('2d');
 
-        // Set high resolution for crisp edges
-        const canvasWidth = 512;
-        const canvasHeight = 1024;
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-
-        // Fill the texture with white (which means opaque in the alphaMap)
+        // Fill background with white (this becomes transparent)
         ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Set the cutout color to black (which means transparent in the alphaMap)
+        // Set cutout color to black (this is what's visible)
         ctx.fillStyle = 'black';
 
-        const numRows = 8; // Number of pattern rows
-        const numCols = 4; // Number of pattern columns
-        const rowHeight = canvasHeight / numRows;
-        const colWidth = canvasWidth / numCols;
-        const padding = 10; // Padding around shapes
+        const numRows = 8;
+        const numCols = 4;
+        const cellWidth = canvas.width / numCols;
+        const cellHeight = canvas.height / numRows;
+        const padding = 20;
+        const size = Math.min(cellWidth, cellHeight) / 2 - padding;
 
-        // Define the "U" shape path
-        const drawUShape = (x, y, w, h, inverted = false) => {
+        const drawPolygon = (cx, cy, sides, radius, rotation = 0) => {
             ctx.beginPath();
-            if (!inverted) {
-                // Standard "U" shape
-                ctx.moveTo(x, y);
-                ctx.lineTo(x, y + h / 2);
-                ctx.arcTo(x + w / 2, y + h, x + w, y + h / 2, w / 2);
-                ctx.lineTo(x + w, y);
-            } else {
-                // Inverted "U" shape
-                ctx.moveTo(x, y + h);
-                ctx.lineTo(x, y + h / 2);
-                ctx.arcTo(x + w / 2, y, x + w, y + h / 2, w / 2);
-                ctx.lineTo(x + w, y + h);
+            for (let i = 0; i < sides; i++) {
+                const angle = (i / sides) * 2 * Math.PI + rotation;
+                const x = cx + radius * Math.cos(angle);
+                const y = cy + radius * Math.sin(angle);
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
             }
+            ctx.closePath();
             ctx.fill();
         };
 
-        // Draw the repeating, staggered pattern
-        for (let row = 0; row < numRows; row++) {
-            for (let col = 0; col < numCols; col++) {
-                const x = col * colWidth + padding;
-                const y = row * rowHeight + padding;
-                const w = colWidth - 2 * padding;
-                const h = rowHeight - 2 * padding;
+        const drawStar = (cx, cy, spikes, outerRadius, innerRadius, rotation = 0) => {
+            let rot = Math.PI / 2 * 3 + rotation;
+            let x, y;
+            const step = Math.PI / spikes;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - outerRadius);
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outerRadius;
+                y = cy + Math.sin(rot) * outerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+
+                x = cx + Math.cos(rot) * innerRadius;
+                y = cy + Math.sin(rot) * innerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+            }
+            ctx.lineTo(cx, cy - outerRadius);
+            ctx.closePath();
+            ctx.fill();
+        };
+
+        const drawCircle = (cx, cy, radius) => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+            ctx.fill();
+        };
+
+        const shapes = [
+            (cx, cy, s) => drawPolygon(cx, cy, 6, s), // Hexagon
+            (cx, cy, s) => drawStar(cx, cy, 5, s, s / 2), // 5-point star
+            (cx, cy, s) => drawCircle(cx, cy, s * 0.9), // Circle
+            (cx, cy, s) => drawPolygon(cx, cy, 3, s, Math.PI / 2), // Triangle
+        ];
+
+        for (let r = 0; r < numRows; r++) {
+            for (let c = 0; c < numCols; c++) {
+                const cx = c * cellWidth + cellWidth / 2;
+                const cy = r * cellHeight + cellHeight / 2;
                 
-                // Stagger columns: even columns get one pattern, odd columns another
-                if (col % 2 === 0) {
-                     // Inverted U for top rows, U for bottom rows, complex for middle
-                    if (row < 2) drawUShape(x, y, w, h, true); // Top rows inverted
-                    else if (row > numRows - 3) drawUShape(x, y, w, h, false); // Bottom rows
-                    else { // Middle complex shape (approximated with two smaller U's)
-                        drawUShape(x, y, w, h/2, true);
-                        drawUShape(x, y + h/2, w, h/2, false);
-                    }
-                } else {
-                    // Staggered pattern: U for top, Inverted U for bottom
-                     if (row < numRows / 2) drawUShape(x, y, w, h, false);
-                     else drawUShape(x, y, w, h, true);
-                }
+                const shapeIndex = (r + c) % shapes.length;
+                shapes[shapeIndex](cx, cy, size);
             }
         }
 
         return new THREE.CanvasTexture(canvas);
     };
 
-    const createPatternedCylinder = () => {
-        if (cylinder) scene.remove(cylinder);
-        
-        const radius = 2;
-        const height = 5;
-        
-        // Create the cylinder with cutout patterns
-        const geometry = new THREE.CylinderGeometry(radius, radius, height, 32, 1, true);
-        const alphaMapTexture = createCylinderPatternTexture();
-        alphaMapTexture.wrapS = THREE.RepeatWrapping;
-        alphaMapTexture.wrapT = THREE.RepeatWrapping;
-        alphaMapTexture.repeat.set(4, 1); // Repeat the texture 4 times horizontally
-
-        // Create the main cylinder with cutouts
-        const material = new THREE.MeshBasicMaterial({
-            color: 0x000000,
-            alphaMap: alphaMapTexture,
-            transparent: true,
-            alphaTest: 0.5,
-            side: THREE.DoubleSide,
-        });
-        
-        cylinder = new THREE.Mesh(geometry, material);
-        scene.add(cylinder);
-
-        // Create a solid cylinder for the inner light source
-        const innerRadius = 1.9; // Slightly smaller than the main cylinder
-        const innerGeometry = new THREE.CylinderGeometry(innerRadius, innerRadius, height - 0.1, 32);
-        const innerMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x000000, // Start with black (off)
-            side: THREE.FrontSide
-        });
-        innerCylinder = new THREE.Mesh(innerGeometry, innerMaterial);
-        strobeGroup.add(innerCylinder);
-        
-        // Create a mask cylinder that will define where the light can be seen
-        // This will be used with the stencil buffer
-        const maskGeometry = new THREE.CylinderGeometry(radius, radius, height, 32, 1, true);
-        const maskMaterial = new THREE.MeshBasicMaterial({
-            colorWrite: false, // Don't write color, only affect the stencil buffer
-            depthWrite: false, // Don't write to depth buffer
-            stencilWrite: true, // Write to stencil buffer
-            stencilRef: 1,
-            stencilFunc: THREE.AlwaysStencilFunc,
-            stencilZPass: THREE.ReplaceStencilOp
-        });
-        
-        cylinderMask = new THREE.Mesh(maskGeometry, maskMaterial);
-        cylinderMask.renderOrder = 0; // Render first to set up stencil
-        strobeGroup.add(cylinderMask);
-        
-        // Configure the inner cylinder to only render where the stencil is set
-        innerMaterial.stencilWrite = true;
-        innerMaterial.stencilRef = 1;
-        innerMaterial.stencilFunc = THREE.EqualStencilFunc;
-        innerMaterial.stencilZPass = THREE.KeepStencilOp;
-        innerCylinder.renderOrder = 1; // Render after the mask
-    };
-
-    const createOuterCasing = () => {
-        const radius = 2.2;
-        const height = 5.5;
-        const geometry = new THREE.CylinderGeometry(radius, radius, height, 64, 1, true);
-
-        // Make the outer casing more subtle
-        const material = new THREE.MeshPhysicalMaterial({
-            color: 0xffffff,
-            transmission: 1.0, // Fully transparent like glass
-            opacity: 0.2,      // Very slightly visible
-            metalness: 0,
-            roughness: 0.05,   // Very smooth for clear reflections
-            ior: 1.5,          // Index of refraction for glass
-            transparent: true,
-            side: THREE.DoubleSide
-        });
-
-        const outerCasing = new THREE.Mesh(geometry, material);
-        scene.add(outerCasing);
-    };
+    let lastFlickerAngle = 0;
+    let flashDuration = 0;
 
     const animateThree = () => {
-        // This function is the single animation loop now
         if (!isRunning) return;
-        
-        const delta = clock.getDelta();
-        const rotationPerSecond = (2 * Math.PI * frequency) / slitCount;
-        cylinder.rotation.y += rotationPerSecond * delta;
-
-        // Keep the mask and inner cylinder in sync with the main cylinder
-        if (cylinderMask) {
-            cylinderMask.rotation.y = cylinder.rotation.y;
-        }
-
-        // --- Artificial Strobe Logic ---
-        const anglePerSlit = (2 * Math.PI) / slitCount;
-        const currentAngle = cylinder.rotation.y;
-
-        // Check if we've crossed the threshold for a new slit to trigger a flash
-        if (Math.floor(currentAngle / anglePerSlit) > Math.floor(lastFlickerAngle / anglePerSlit)) {
-            // Pick a new random color for the flash
-            currentFlashColor = flashColors[Math.floor(Math.random() * flashColors.length)];
-
-            // Adjust flash duration based on frequency
-            // Lower frequencies need longer flashes to be visible through the cutouts
-            if (frequency <= 3) {
-                flashDuration = 3; // Longer flash for very low frequencies
-            } else if (frequency <= 8) {
-                flashDuration = 2; // Medium flash for mid-low frequencies
-            } else if (frequency <= 10) {
-                flashDuration = 2; // Standard flash for medium frequencies
-            } else {
-                flashDuration = 1; // Short flash for high frequencies
-            }
-        }
-        lastFlickerAngle = currentAngle;
-
-        // Execute the flash
-        if (flashDuration > 0) {
-            innerCylinder.material.color.set(currentFlashColor); // Use the new dynamic color
-            flashDuration--;
-        } else {
-            innerCylinder.material.color.set(0x000000); // Return inner cylinder to black
-        }
-        
-        // Clear the stencil buffer before rendering
-        renderer.clear(false, false, true);
-        
-        // Render the scene via the composer to apply post-processing effects
-        composer.render();
         animationFrameId = requestAnimationFrame(animateThree);
+        const delta = clock.getDelta();
+        cylinder.rotation.y += (2 * Math.PI * frequency) / slitCount * delta;
+        const anglePerSlit = (2 * Math.PI) / slitCount;
+        if (Math.floor(cylinder.rotation.y / anglePerSlit) > Math.floor(lastFlickerAngle / anglePerSlit)) {
+            currentFlashColor = flashColors[Math.floor(Math.random() * flashColors.length)];
+            flashDuration = frequency <= 8 ? 2 : 1;
+        }
+        lastFlickerAngle = cylinder.rotation.y;
+        innerCylinder.material.color.set(flashDuration > 0 ? currentFlashColor : 0x000000);
+        if (flashDuration > 0) flashDuration--;
+        composer.render();
     };
 
-    // --- Inactivity Detection ---
     const startInactivityTimer = () => {
         clearTimeout(inactivityTimer);
-        
-        // Show controls immediately when activity is detected
-        if (!controlsVisible) {
-            showControls();
-        }
-        
-        // Set a new timer to hide controls after 3 seconds
-        inactivityTimer = setTimeout(() => {
-            hideControls();
-        }, 3000); // 3 seconds
+        if (!controlsVisible) showControls();
+        inactivityTimer = setTimeout(hideControls, 3000);
     };
+    const showControls = () => { controls.style.opacity = '1'; controls.style.transform = 'translateX(-50%) translateY(0)'; controlsVisible = true; };
+    const hideControls = () => { controls.style.opacity = '0'; controls.style.transform = 'translateX(-50%) translateY(20px)'; controlsVisible = false; };
+    const setupActivityListeners = () => { ['mousemove','mousedown','keydown','touchstart','touchmove'].forEach(evt => document.addEventListener(evt, startInactivityTimer)); };
+    const removeActivityListeners = () => { ['mousemove','mousedown','keydown','touchstart','touchmove'].forEach(evt => document.removeEventListener(evt, startInactivityTimer)); };
+    const toggleSidebar = () => sidebar.classList.toggle('active');
+    const closeSidebar = () => sidebar.classList.remove('active');
     
-    const showControls = () => {
-        controls.style.opacity = '1';
-        controls.style.transform = 'translateX(-50%) translateY(0)';
-        controlsVisible = true;
-    };
-    
-    const hideControls = () => {
-        controls.style.opacity = '0';
-        controls.style.transform = 'translateX(-50%) translateY(20px)';
-        controlsVisible = false;
-    };
-    
-    // Setup activity listeners
-    const setupActivityListeners = () => {
-        document.addEventListener('mousemove', startInactivityTimer);
-        document.addEventListener('mousedown', startInactivityTimer);
-        document.addEventListener('keydown', startInactivityTimer);
-        document.addEventListener('touchstart', startInactivityTimer);
-        document.addEventListener('touchmove', startInactivityTimer);
-    };
-    
-    // Remove activity listeners
-    const removeActivityListeners = () => {
-        document.removeEventListener('mousemove', startInactivityTimer);
-        document.removeEventListener('mousedown', startInactivityTimer);
-        document.removeEventListener('keydown', startInactivityTimer);
-        document.removeEventListener('touchstart', startInactivityTimer);
-        document.removeEventListener('touchmove', startInactivityTimer);
+    const initSidebarSections = () => {
+        sidebarHeaders.forEach(header => {
+            header.addEventListener('click', (e) => {
+                e.preventDefault();
+                header.classList.toggle('active');
+                header.nextElementSibling.classList.toggle('active');
+            });
+        });
     };
 
     const startExperience = () => {
         if (isRunning) return;
         isRunning = true;
+        hasUserInteracted = true; // Mark that user has interacted
         
-        // Start inactivity detection
+        closeSidebar();
+        dreamachineContainer.classList.remove('hidden');
+        onboardingContainer.classList.add('hidden');
+        // Hide sidebar toggle button when experience starts
+        sidebarToggle.style.display = 'none';
         setupActivityListeners();
         startInactivityTimer();
 
-        // Stop existing animation frame if any to prevent multiple loops
-        cancelAnimationFrame(animationFrameId);
-
-        // Always use 3D rendering for classic mode
-        canvas.classList.add('hidden'); // Hide 2D canvas
-        canvas.style.display = 'none';
-        threeCanvas.classList.remove('hidden'); // Show 3D canvas
-        threeCanvas.style.display = 'block';
-
-        if (!scene) initThree(); // Initialize Three.js scene if not already
+        if (!scene) initThree();
         
-        // THIS IS THE FIX: Set initial canvas sizes correctly right after init
-        onWindowResize(); 
-        
-        animationFrameId = requestAnimationFrame(animateThree); // Start 3D animation loop
+        onWindowResize();
+        animateThree();
 
-        // Start the audio and transport
-        Tone.Transport.start();
-        if (soundEnabled) {
-            player.start();
+        try {
+            // Explicitly start audio context on user interaction
+            if (Tone.context.state !== 'running') {
+                Tone.context.resume().then(() => {
+                    console.log("AudioContext resumed successfully");
+                    Tone.Transport.start();
+                    if (isAudioReady) {
+                        switchTrack(queuePosition);
+                    } else {
+                        console.warn("Audio not ready yet, experience will start without sound.");
+                    }
+                }).catch(err => {
+                    console.error("Failed to resume AudioContext:", err);
+                });
+            } else {
+                Tone.Transport.start();
+                if (isAudioReady) {
+                    switchTrack(queuePosition);
+                }
+            }
+        } catch (e) {
+            console.error("Audio initialization error:", e);
         }
     };
 
@@ -406,82 +527,95 @@ document.addEventListener('DOMContentLoaded', () => {
         removeActivityListeners();
         clearTimeout(inactivityTimer);
         showControls();
-        cancelAnimationFrame(animationFrameId); // Stop current animation frame
+        cancelAnimationFrame(animationFrameId);
+        
+        // Show sidebar toggle button when exiting experience
+        sidebarToggle.style.display = 'flex';
 
-        Tone.Transport.stop();
-        player.stop();
-
-        // Clear and dispose of Three.js resources
-        if (renderer) {
-            renderer.clear();
-            if (scene) {
-            scene.traverse(object => {
-                if (object.isMesh) {
-                        if (object.geometry) object.geometry.dispose();
-                    if (object.material) {
-                            if(object.material.alphaMap) object.material.alphaMap.dispose(); // Dispose texture
-                            if (Array.isArray(object.material)) object.material.forEach(material => material.dispose());
-                            else object.material.dispose();
-                    }
+        if (Tone.Transport.state === 'started') Tone.Transport.stop();
+        
+        // Dispose all players and revoke all blob URLs to free up memory
+        for (const trackData of players.values()) {
+            if (trackData) {
+                if (trackData.player && !trackData.player.disposed) {
+                    trackData.player.dispose();
                 }
-            });
-                scene.remove(...scene.children); // Remove all children from scene
+                if (trackData.blobUrl) {
+                    URL.revokeObjectURL(trackData.blobUrl);
+                }
             }
-            renderer.dispose(); // Dispose renderer
         }
-        // Set all Three.js related global variables to null after disposal
-        scene = null;
-        camera = null;
-        renderer = null; // Important: set to null after dispose
-        composer = null; // Ensure composer is nulled
-        cylinder = null;
-        innerCylinder = null;
-        cylinderMask = null;
-        strobeGroup = null;
+        players.clear();
+        currentPlayerKey = null;
 
-        // Ensure 3D canvas is hidden
-        threeCanvas.classList.add('hidden');
-        threeCanvas.style.display = 'none';
+        dreamachineContainer.classList.add('hidden');
+        onboardingContainer.classList.remove('hidden');
+        welcomeScreen.classList.add('active');
+        disclaimerScreen.classList.remove('active');
+        preparationScreen.classList.remove('active');
     };
 
     const updateFrequency = () => {
         hzValue.textContent = `${frequency.toFixed(1)} Hz`;
-        Tone.Transport.bpm.value = frequency * 60;
     };
 
-    // --- UI and Application Flow ---
-    const enterDreamachine = async () => {
-        await Tone.start();
-        console.log('Audio context started');
-        onboardingContainer.classList.add('hidden'); // Hide the whole onboarding flow
-        dreamachineContainer.classList.remove('hidden');
+    const onWindowResize = () => {
+        if (!isRunning || !renderer) return;
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        composer.setSize(window.innerWidth, window.innerHeight);
+    };
+
+    const initialize = async () => {
+        updateFrequency();
+        initSidebarSections();
         
-        window.addEventListener('resize', onWindowResize);
-        setupActivityListeners();
-        startInactivityTimer(); // Start the timer immediately
-        updateFrequency(); // Set initial frequency
-        startExperience();
-    };
+        generateShuffleQueue();
+        
+        // Apply ripple effects to the next track button
+        addRippleEffect(nextTrackBtn);
+        addTouchRippleEffect(nextTrackBtn);
+        
+        beginExperienceBtn.textContent = 'Loading...';
+        beginExperienceBtn.disabled = true;
+        
+        // Pre-load the first track using the new fetch and blob method
+        try {
+            const firstTrack = shuffledQueue[0];
+            if (firstTrack) {
+                // Set placeholder to prevent duplicate loading
+                players.set(firstTrack.name, { status: 'loading', player: null, blobUrl: null });
+                
+                const response = await fetch(firstTrack.path);
+                if (!response.ok) throw new Error(`Failed to fetch first track: ${response.statusText}`);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                
+                const player = new Tone.Player(blobUrl, () => {
+                    console.log("First track loaded. Experience is ready.");
+                    isAudioReady = true;
+                    beginExperienceBtn.disabled = false;
+                    beginExperienceBtn.textContent = 'Begin Experience';
+                    
+                    // Now that the first is ready, update its status
+                    players.set(firstTrack.name, { status: 'loaded', player: player, blobUrl: blobUrl });
 
-    const exitDreamachine = () => {
-        stopExperience();
-        dreamachineContainer.classList.add('hidden');
-        exitMessage.classList.remove('hidden');
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
+                    // Preload the next track for a smoother start
+                    preloadTrack(1);
+                }).toDestination();
+                player.connect(analyser);
+
+            } else {
+                throw new Error("Shuffle queue was empty, no tracks to load.");
+            }
+        } catch (e) {
+            console.error("Critical error during initial audio loading:", e);
+            beginExperienceBtn.textContent = 'Error - Refresh';
+            beginExperienceBtn.disabled = true;
         }
-        // Fade out and return to intro after a moment
-        setTimeout(() => {
-            exitMessage.classList.add('hidden');
-            onboardingContainer.classList.remove('hidden'); // Show onboarding again
-            welcomeScreen.classList.add('active'); // Reset to first step
-            disclaimerScreen.classList.remove('active');
-            preparationScreen.classList.remove('active');
-            document.body.style.cursor = 'auto';
-        }, 4000);
     };
 
-    // --- Event Listeners ---
     welcomeContinueBtn.addEventListener('click', () => {
         welcomeScreen.classList.remove('active');
         disclaimerScreen.classList.add('active');
@@ -492,45 +626,81 @@ document.addEventListener('DOMContentLoaded', () => {
         preparationScreen.classList.add('active');
     });
 
-    beginExperienceBtn.addEventListener('click', enterDreamachine);
+    beginExperienceBtn.addEventListener('click', async () => {
+        try {
+            // This is critical for mobile - must be in response to a user gesture
+            await Tone.start();
+            console.log("Tone.js started successfully");
+        } catch (e) {
+            console.error("Tone.js start error:", e);
+        }
+        startExperience();
+    });
 
-    exitButton.addEventListener('click', exitDreamachine);
+    exitButton.addEventListener('click', stopExperience);
 
     soundToggle.addEventListener('click', () => {
         soundEnabled = !soundEnabled;
         soundToggle.textContent = soundEnabled ? 'On' : 'Off';
-        if (isRunning) {
-            if (soundEnabled && player.state !== 'started') {
-                player.start();
-            } else if (!soundEnabled && player.state === 'started') {
-                player.stop();
+        hasUserInteracted = true; // Mark that user has interacted
+        
+        if (!isAudioReady || !currentPlayerKey || !players.has(currentPlayerKey)) return;
+        
+        const trackData = players.get(currentPlayerKey);
+        if (trackData && trackData.player) {
+            const player = trackData.player;
+            if (isRunning) {
+                if (soundEnabled && player.state !== 'started') {
+                    player.start();
+                    console.log("Started audio via sound toggle");
+                } else if (!soundEnabled && player.state === 'started') {
+                    player.stop();
+                }
             }
         }
     });
+    
+    // Improved track changing handler to ensure touch events work properly
+    const handleInteraction = (handler, e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation(); // Stop event bubbling
+        }
+        
+        // Debounce to prevent multiple rapid calls
+        if (handler.isProcessing) return false;
+        handler.isProcessing = true;
+        setTimeout(() => {
+            handler.isProcessing = false;
+        }, 300);
+        
+        handler();
+        return false; // Prevent default browser behavior
+    };
+
+    // Add debounce property to handlers
+    playNextTrack.isProcessing = false;
+    toggleSidebar.isProcessing = false;
+    closeSidebar.isProcessing = false;
+
+    // Use proper event listeners for both click and touch events on mobile
+    nextTrackBtn.addEventListener('click', (e) => handleInteraction(playNextTrack, e));
+    nextTrackBtn.addEventListener('touchstart', (e) => {
+        hasUserInteracted = true; // Mark that user has interacted
+        handleInteraction(playNextTrack, e);
+    }, { passive: false });
+    
+    sidebarToggle.addEventListener('click', (e) => handleInteraction(toggleSidebar, e));
+    sidebarToggle.addEventListener('touchstart', (e) => handleInteraction(toggleSidebar, e), { passive: false });
+    sidebarClose.addEventListener('click', (e) => handleInteraction(closeSidebar, e));
+    sidebarClose.addEventListener('touchstart', (e) => handleInteraction(closeSidebar, e), { passive: false });
 
     freqSlider.addEventListener('input', (e) => {
-        const freqIndex = parseInt(e.target.value);
-        frequency = frequencies[freqIndex];
+        frequency = frequencies[parseInt(e.target.value)];
             updateFrequency();
     });
 
-    // Handle window resizing
-    const onWindowResize = () => {
-        if (!isRunning) return;
+    window.addEventListener('resize', onWindowResize);
 
-        // Only need to handle the 3D canvas now
-        if (scene && camera && renderer) {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            
-            // Use the same camera position for all screen sizes
-            camera.position.z = 5.0;
-            
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            composer.setSize(window.innerWidth, window.innerHeight); // Resize composer
-        }
-    };
-
-    // Initialize
-    // (no initial setup call, happens on start)
+    initialize();
 }); 
