@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let controlsVisible = true;
     let slitCount = 12; // Reduced from 16 to 12
     
+    
     // --- Mobile Detection ---
     const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
