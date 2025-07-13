@@ -71,8 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
     let shuffledQueue = [];
     let queuePosition = 0;
-    
-    
+
     // --- Audio Engine ---
     const players = new Map(); // Using a Map to manage players manually
     let isAudioReady = false;
