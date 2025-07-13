@@ -359,6 +359,23 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fill background with white (this becomes transparent)
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Add subtle cardboard texture to the background
+        const addCardboardTexture = () => {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                // Very subtle noise (only +/- 3% variation in brightness)
+                const noise = Math.random() * 6 - 3; 
+                data[i] = Math.max(0, Math.min(255, data[i] + noise));     // r
+                data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise)); // g
+                data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise)); // b
+            }
+            ctx.putImageData(imageData, 0, 0);
+        };
+        
+        // Add the subtle texture
+        addCardboardTexture();
 
         // Set cutout color to black (this is what's visible)
         ctx.fillStyle = 'black';
@@ -373,11 +390,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const size = Math.min(cellWidth, cellHeight) / 2 - padding;
 
         const drawPolygon = (cx, cy, sides, radius, rotation = 0) => {
+            // Add very slight irregularity to the edges for cardboard feel
             ctx.beginPath();
             for (let i = 0; i < sides; i++) {
                 const angle = (i / sides) * 2 * Math.PI + rotation;
-                const x = cx + radius * Math.cos(angle);
-                const y = cy + radius * Math.sin(angle);
+                // Add tiny random variation to radius (±1.5% max)
+                const radiusVariation = radius * (1 + (Math.random() * 0.03 - 0.015));
+                const x = cx + radiusVariation * Math.cos(angle);
+                const y = cy + radiusVariation * Math.sin(angle);
                 if (i === 0) {
                     ctx.moveTo(x, y);
                 } else {
