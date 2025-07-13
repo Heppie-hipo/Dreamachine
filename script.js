@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextTrackBtn = document.getElementById('next-track');
 
     // State
-    const frequencies = [3, 8, 10, 18];
+    const frequencies = [4, 8, 13]; // Accurate frequency values: 4 Hz, 8 Hz, 13 Hz
     let animationFrameId;
     let isRunning = false;
     let frequency = 8;
@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Flash Color Palette ---
     const flashColors = [
+        new THREE.Color(0xFFFFFF), // Pure white (new)
         new THREE.Color(0x00CED1), // Dark turquoise
         new THREE.Color(0x20B2AA), // Light sea green
         new THREE.Color(0x4169E1), // Royal blue
@@ -359,23 +360,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fill background with white (this becomes transparent)
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Add subtle cardboard texture to the background
-        const addCardboardTexture = () => {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                // Very subtle noise (only +/- 3% variation in brightness)
-                const noise = Math.random() * 6 - 3; 
-                data[i] = Math.max(0, Math.min(255, data[i] + noise));     // r
-                data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise)); // g
-                data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise)); // b
-            }
-            ctx.putImageData(imageData, 0, 0);
-        };
-        
-        // Add the subtle texture
-        addCardboardTexture();
 
         // Set cutout color to black (this is what's visible)
         ctx.fillStyle = 'black';
@@ -390,14 +374,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const size = Math.min(cellWidth, cellHeight) / 2 - padding;
 
         const drawPolygon = (cx, cy, sides, radius, rotation = 0) => {
-            // Add very slight irregularity to the edges for cardboard feel
             ctx.beginPath();
             for (let i = 0; i < sides; i++) {
                 const angle = (i / sides) * 2 * Math.PI + rotation;
-                // Add tiny random variation to radius (±1.5% max)
-                const radiusVariation = radius * (1 + (Math.random() * 0.03 - 0.015));
-                const x = cx + radiusVariation * Math.cos(angle);
-                const y = cy + radiusVariation * Math.sin(angle);
+                const x = cx + radius * Math.cos(angle);
+                const y = cy + radius * Math.sin(angle);
                 if (i === 0) {
                     ctx.moveTo(x, y);
                 } else {
@@ -464,14 +445,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isRunning) return;
         animationFrameId = requestAnimationFrame(animateThree);
         const delta = clock.getDelta();
+        
+        // Main rotation for the stroboscopic effect
         cylinder.rotation.y += (2 * Math.PI * frequency) / slitCount * delta;
+        
+        // Add subtle tilt animation to emphasize 3D nature
+        cylinder.rotation.x = Math.sin(clock.getElapsedTime() * 0.2) * 0.03;
+        
         const anglePerSlit = (2 * Math.PI) / slitCount;
         if (Math.floor(cylinder.rotation.y / anglePerSlit) > Math.floor(lastFlickerAngle / anglePerSlit)) {
             currentFlashColor = flashColors[Math.floor(Math.random() * flashColors.length)];
-            flashDuration = frequency <= 8 ? 2 : 1;
+            // Increased flash intensity for more abrupt transitions
+            flashDuration = 3; // Increased from previous value for stronger flash
         }
         lastFlickerAngle = cylinder.rotation.y;
+        
+        // More abrupt on/off transition - either full brightness or complete darkness
         innerCylinder.material.color.set(flashDuration > 0 ? currentFlashColor : 0x000000);
+        
         if (flashDuration > 0) flashDuration--;
         composer.render();
     };
@@ -717,8 +708,17 @@ document.addEventListener('DOMContentLoaded', () => {
     sidebarClose.addEventListener('touchstart', (e) => handleInteraction(closeSidebar, e), { passive: false });
 
     freqSlider.addEventListener('input', (e) => {
-        frequency = frequencies[parseInt(e.target.value)];
-            updateFrequency();
+        // Get slider value but limit it to the available frequencies range
+        const sliderValue = Math.min(parseInt(e.target.value), frequencies.length - 1);
+        
+        // Ensure slider doesn't visually go beyond the maximum value
+        if (parseInt(e.target.value) > frequencies.length - 1) {
+            e.target.value = frequencies.length - 1;
+        }
+        
+        // Update frequency
+        frequency = frequencies[sliderValue];
+        updateFrequency();
     });
 
     window.addEventListener('resize', onWindowResize);
