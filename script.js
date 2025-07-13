@@ -83,10 +83,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Flash Color Palette ---
     const flashColors = [
-        new THREE.Color(0xff00ff), new THREE.Color(0x00ffff), new THREE.Color(0xffff00),
-        new THREE.Color(0xff0077), new THREE.Color(0x00ff77), new THREE.Color(0x7700ff),
-        new THREE.Color(0xff7700), new THREE.Color(0x0077ff), new THREE.Color(0xccff00),
-        new THREE.Color(0xffcc00),
+        new THREE.Color(0x00CED1), // Dark turquoise
+        new THREE.Color(0x20B2AA), // Light sea green
+        new THREE.Color(0x4169E1), // Royal blue
+        new THREE.Color(0x00BFFF), // Deep sky blue
+        new THREE.Color(0x32CD32), // Lime green
+        new THREE.Color(0x008B8B), // Dark cyan
+        new THREE.Color(0x1E90FF), // Dodger blue
+        new THREE.Color(0x00FF7F), // Spring green
+        new THREE.Color(0xFF8C00), // Dark orange (for contrast)
+        new THREE.Color(0x2E8B57), // Sea green
     ];
     let currentFlashColor = flashColors[0];
 
