@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const controls = document.getElementById('controls');
     const freqButtons = document.querySelectorAll('.freq-button');
     
+
     // --- Sidebar Elements ---
     const sidebarToggle = document.getElementById('sidebar-toggle');
     const sidebar = document.getElementById('sidebar');
