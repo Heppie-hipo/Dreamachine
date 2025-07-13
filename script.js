@@ -196,122 +196,263 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Set placeholder to prevent re-triggering the download
-        players.set(trackToLoad.name, { status: 'loading', player: null, blobUrl: null });
+            players.set(trackToLoad.name, { status: 'loading', player: null, blobUrl: null });
+            
+            console.log(`Fetching track for preloading: ${trackToLoad.name}`);
         
-        console.log(`Fetching track for preloading: ${trackToLoad.name}`);
+        // Track fetch attempts to prevent infinite retries
+        let fetchAttempts = 0;
+        const maxFetchAttempts = 3;
         
         // 1. Start the pre-download process for raw data as fallback
-        fetch(trackToLoad.path)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.arrayBuffer();
-            })
-            .then(buffer => {
-                // Store the raw buffer data for fallback use
-                preDownloadedTracks.set(trackToLoad.name, buffer);
-                console.log(`Pre-downloaded raw data for: ${trackToLoad.name}`);
-                
-                // If this track is the current one and still not loaded, it might be needed immediately
-                if (currentPlayerKey === trackToLoad.name && 
-                    players.has(trackToLoad.name) && 
-                    players.get(trackToLoad.name).status === 'loading') {
-                    createPlayerFromBuffer(trackToLoad.name, buffer);
-                }
-            })
-            .catch(e => {
-                console.error(`Error pre-downloading track: ${trackToLoad.name}`, e);
-            });
+        const preDownloadTrack = () => {
+            if (fetchAttempts >= maxFetchAttempts) {
+                console.warn(`Maximum fetch attempts reached for pre-download: ${trackToLoad.name}`);
+                return;
+            }
             
+            fetchAttempts++;
+            
+            fetch(trackToLoad.path)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.arrayBuffer();
+                })
+                .then(buffer => {
+                    // Store the raw buffer data for fallback use
+                    preDownloadedTracks.set(trackToLoad.name, buffer);
+                    console.log(`Pre-downloaded raw data for: ${trackToLoad.name}`);
+                    
+                    // If this track is the current one and still not loaded, it might be needed immediately
+                    if (currentPlayerKey === trackToLoad.name && 
+                        players.has(trackToLoad.name) && 
+                        players.get(trackToLoad.name).status === 'loading') {
+                        createPlayerFromBuffer(trackToLoad.name, buffer);
+                    }
+                })
+                .catch(e => {
+                    console.error(`Error pre-downloading track: ${trackToLoad.name}`, e);
+                    
+                    // Retry with exponential backoff for mobile devices
+                    if (fetchAttempts < maxFetchAttempts) {
+                        const delay = Math.pow(2, fetchAttempts) * 500; // 1s, 2s, 4s
+                        console.log(`Retrying pre-download in ${delay}ms (attempt ${fetchAttempts})`);
+                        setTimeout(preDownloadTrack, delay);
+                    }
+                });
+        };
+        
         // 2. Start the normal Tone.Player preloading process
-        fetch(trackToLoad.path)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.blob();
-            })
-            .then(blob => {
-                const blobUrl = URL.createObjectURL(blob);
-                const player = new Tone.Player(blobUrl, () => {
-                    console.log(`Preloaded and ready: ${trackToLoad.name}`);
-                    players.set(trackToLoad.name, { status: 'loaded', player: player, blobUrl: blobUrl });
-                }).toDestination();
-                player.connect(analyser);
-            })
-            .catch(e => {
-                console.error("Error preloading track with fetch:", e);
-                // Don't remove the placeholder - we might still use the pre-downloaded version
-                // Just mark it as having an issue with the primary loading method
-                if (players.has(trackToLoad.name)) {
-                    players.set(trackToLoad.name, { 
-                        ...players.get(trackToLoad.name), 
-                        primaryLoadFailed: true 
-                    });
-                }
-            });
+        let blobFetchAttempts = 0;
+        
+        const preloadWithTonePlayer = () => {
+            if (blobFetchAttempts >= maxFetchAttempts) {
+                console.warn(`Maximum fetch attempts reached for Tone.Player: ${trackToLoad.name}`);
+                return;
+            }
+            
+            blobFetchAttempts++;
+            
+            fetch(trackToLoad.path)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const blobUrl = URL.createObjectURL(blob);
+                    
+                    // Create player with timeout to prevent hanging
+                    const playerCreationTimeout = setTimeout(() => {
+                        console.warn(`Player creation timed out for: ${trackToLoad.name}`);
+                        
+                        // If this is the current track, try to use the pre-downloaded version
+                        if (currentPlayerKey === trackToLoad.name) {
+                            const buffer = preDownloadedTracks.get(trackToLoad.name);
+                            if (buffer) {
+                                createPlayerFromBuffer(trackToLoad.name, buffer);
+                            } else {
+                                // Mark as error if we can't create a player
+                                players.set(trackToLoad.name, { 
+                                    status: 'error', 
+                                    player: null, 
+                                    blobUrl: blobUrl 
+                                });
+                                
+                                // Re-enable button if this is the current track
+                                if (currentPlayerKey === trackToLoad.name) {
+                                    nextTrackBtn.disabled = false;
+                                    nextTrackBtn.textContent = 'Change Track';
+                                }
+                            }
+                        }
+                    }, 10000); // 10 second timeout
+                    
+                    const player = new Tone.Player(blobUrl, () => {
+                        clearTimeout(playerCreationTimeout);
+                        console.log(`Preloaded and ready: ${trackToLoad.name}`);
+                        players.set(trackToLoad.name, { status: 'loaded', player: player, blobUrl: blobUrl });
+                        
+                        // If this is the current track and the button is still disabled, enable it
+                        if (currentPlayerKey === trackToLoad.name && nextTrackBtn.disabled) {
+                            nextTrackBtn.disabled = false;
+                            nextTrackBtn.textContent = 'Change Track';
+                        }
+                    }).toDestination();
+                    player.connect(analyser);
+                })
+                .catch(e => {
+                    console.error("Error preloading track with fetch:", e);
+                    
+                    // Retry with exponential backoff for mobile devices
+                    if (blobFetchAttempts < maxFetchAttempts) {
+                        const delay = Math.pow(2, blobFetchAttempts) * 500; // 1s, 2s, 4s
+                        console.log(`Retrying Tone.Player preload in ${delay}ms (attempt ${blobFetchAttempts})`);
+                        setTimeout(preloadWithTonePlayer, delay);
+                    } else {
+                        // Don't remove the placeholder - we might still use the pre-downloaded version
+                        // Just mark it as having an issue with the primary loading method
+                        if (players.has(trackToLoad.name)) {
+                            players.set(trackToLoad.name, { 
+                                ...players.get(trackToLoad.name), 
+                                primaryLoadFailed: true 
+                            });
+                            
+                            // If this is the current track, try to use the pre-downloaded version
+                            if (currentPlayerKey === trackToLoad.name) {
+                                const buffer = preDownloadedTracks.get(trackToLoad.name);
+                                if (buffer) {
+                                    createPlayerFromBuffer(trackToLoad.name, buffer);
+                                } else {
+                                    // Re-enable button if this is the current track
+                                    nextTrackBtn.disabled = false;
+                                    nextTrackBtn.textContent = 'Change Track';
+                                }
+                            }
+                        }
+                    }
+                });
+        };
+        
+        // Start both loading processes
+        preDownloadTrack();
+        preloadWithTonePlayer();
     };
     
     // Helper function to create a player from pre-downloaded buffer
     const createPlayerFromBuffer = (trackName, buffer) => {
         if (!buffer) return false;
-        
+
         try {
-            // Create an audio context
             const audioContext = Tone.context;
-            
-            // Decode the audio data
-            audioContext.decodeAudioData(buffer.slice(0), (decodedData) => {
-                // Create an AudioBuffer source
-                const audioBuffer = Tone.Buffer.fromArray(decodedData.getChannelData(0));
-                const player = new Tone.Player(audioBuffer).toDestination();
-                player.connect(analyser);
-                
-                console.log(`Created player from pre-downloaded buffer: ${trackName}`);
-                players.set(trackName, { 
-                    status: 'loaded', 
-                    player: player, 
-                    blobUrl: null,
-                    fromPreDownloaded: true
-                });
-                
-                // If this is the current track and we're waiting for it, start playing
-                if (currentPlayerKey === trackName && isRunning && soundEnabled) {
-                    player.fadeIn = 0.5;
-                    player.loop = true;
-                    player.start();
-                    
-                    // Re-enable the Next Track button
+
+            // On mobile, make sure the AudioContext is running before decoding
+            if (isMobile() && audioContext.state !== 'running') {
+                console.log("Attempting to resume audio context before buffer decoding");
+                audioContext.resume().catch(err => console.warn("Mobile context resume warning:", err));
+            }
+
+            // Decode the raw ArrayBuffer data
+            audioContext.decodeAudioData(buffer.slice(0)).then((decodedData) => {
+                try {
+                    // Create the player directly from the decoded AudioBuffer
+                    const player = new Tone.Player({
+                        url: decodedData,
+                        loop: true,
+                        autostart: false,
+                    }).toDestination();
+
+                    player.connect(analyser);
+
+                    // Store reference so we can manage memory later
+                    players.set(trackName, {
+                        status: 'loaded',
+                        player: player,
+                        blobUrl: null,
+                        fromPreDownloaded: true,
+                    });
+
+                    console.log(`Created player from pre-downloaded buffer: ${trackName}`);
+
+                    // If this track is the one the user is waiting for, start it immediately
+                    if (currentPlayerKey === trackName && isRunning && soundEnabled) {
+                        try {
+                            player.fadeIn = 0.5;
+                            player.start();
+                            console.log("Started playing from fallback buffer");
+                        } catch (playErr) {
+                            console.error("Error starting fallback buffer playback:", playErr);
+                        }
+                        // Re-enable the UI regardless of start success
+                        nextTrackBtn.disabled = false;
+                        nextTrackBtn.textContent = 'Change Track';
+                    }
+                } catch (playerErr) {
+                    console.error("Error creating Tone.Player from decoded buffer:", playerErr);
                     nextTrackBtn.disabled = false;
                     nextTrackBtn.textContent = 'Change Track';
                 }
-            }, (err) => {
-                console.error(`Error decoding pre-downloaded audio: ${trackName}`, err);
-                return false;
+            }).catch((decodeErr) => {
+                console.error(`Error decoding pre-downloaded audio (${trackName}):`, decodeErr);
+                nextTrackBtn.disabled = false;
+                nextTrackBtn.textContent = 'Change Track';
             });
-            return true;
-        } catch (e) {
-            console.error(`Error creating player from buffer: ${trackName}`, e);
+
+            return true; // We handled the creation attempt
+        } catch (outerErr) {
+            console.error(`Error in createPlayerFromBuffer for ${trackName}:`, outerErr);
+            nextTrackBtn.disabled = false;
+            nextTrackBtn.textContent = 'Change Track';
             return false;
         }
     };
     
+    // --- Utility: fully stop and dispose a loaded track (free memory & ensure silence) ---
+    const stopAndDisposeTrack = (trackName) => {
+        if (!trackName || !players.has(trackName)) return;
+
+        const data = players.get(trackName);
+        if (!data) return;
+
+        try {
+            if (data.player) {
+                // Stop immediately to avoid overlapping audio
+                try { data.player.stop(); } catch (e) { /* already stopped */ }
+                data.player.dispose();
+            }
+            if (data.blobUrl) {
+                URL.revokeObjectURL(data.blobUrl);
+            }
+        } catch (err) {
+            console.warn(`Error disposing track ${trackName}:`, err);
+        }
+
+        players.delete(trackName);
+    };
+
     const switchTrack = (newPosition) => {
         const now = Tone.now();
 
-        // Stop current track if it exists
-        if (currentPlayerKey && players.has(currentPlayerKey)) {
-            const currentTrackData = players.get(currentPlayerKey);
-            if (currentTrackData && currentTrackData.player) {
-                currentTrackData.player.fadeOut = 0.5;
-                currentTrackData.player.stop(now + 0.5);
-            }
+        // --- HARD STOP the currently playing track to avoid multiple simultaneous streams ---
+        if (currentPlayerKey) {
+            stopAndDisposeTrack(currentPlayerKey);
         }
 
         // --- Disable Next Track button during transition ---
         nextTrackBtn.disabled = true;
         nextTrackBtn.textContent = 'Loading...';
+        
+        // Set a safety timeout to ensure button doesn't stay in loading state
+        const buttonSafetyTimeout = setTimeout(() => {
+            if (nextTrackBtn.disabled) {
+                console.warn("Safety timeout triggered: Button was stuck in loading state");
+                nextTrackBtn.disabled = false;
+                nextTrackBtn.textContent = 'Change Track';
+            }
+        }, 8000); // 8 seconds max wait time
 
         // --- Memory Management: Dispose of old players and revoke Blob URLs ---
         const keyToDisposeIndex = (newPosition - 2 + shuffledQueue.length) % shuffledQueue.length;
@@ -338,6 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(`Track at position ${queuePosition} not found.`);
             nextTrackBtn.disabled = false;
             nextTrackBtn.textContent = 'Change Track';
+            clearTimeout(buttonSafetyTimeout);
             return;
         }
         currentPlayerKey = newTrack.name;
@@ -346,6 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const trackData = players.get(currentPlayerKey);
         if (trackData && trackData.status === 'error') {
             console.warn(`Skipping track with load error: ${currentPlayerKey}`);
+            clearTimeout(buttonSafetyTimeout);
             playNextTrack(); // Automatically skip to the next track
             return;
         }
@@ -356,12 +499,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // Preload the next track
         preloadTrack(queuePosition + 1);
 
+        // For mobile devices, try to resume audio context if needed
+        if (isMobile() && Tone.context.state !== 'running') {
+            console.log("Attempting to resume audio context on mobile");
+            Tone.context.resume().catch(err => console.error("Mobile context resume error:", err));
+        }
+
         const playTrack = (retries = 10) => {
             if (retries <= 0) {
                 console.error(`Failed to load track after multiple retries: ${currentPlayerKey}`);
                 players.set(currentPlayerKey, { status: 'error', player: null, blobUrl: null });
                 nextTrackBtn.disabled = false;
                 nextTrackBtn.textContent = 'Change Track';
+                clearTimeout(buttonSafetyTimeout);
                 return;
             }
 
@@ -370,14 +520,39 @@ document.addEventListener('DOMContentLoaded', () => {
             if (trackData && trackData.status === 'loaded' && trackData.player) {
                 // Player is fully loaded and ready
                 if (soundEnabled && isRunning) {
+                    try {
                     trackData.player.fadeIn = 0.5;
                     trackData.player.loop = true;
                     trackData.player.start(now);
                     console.log("Started playing preloaded track:", currentPlayerKey);
+                    } catch (e) {
+                        console.error("Error starting audio playback:", e);
+                        // Try to recover by recreating the player
+                        if (trackData.blobUrl) {
+                            const newPlayer = new Tone.Player(trackData.blobUrl).toDestination();
+                            newPlayer.connect(analyser);
+                            players.set(currentPlayerKey, { 
+                                ...trackData, 
+                                player: newPlayer 
+                            });
+                            
+                            // Try to play again after a short delay
+                            setTimeout(() => {
+                                try {
+                                    newPlayer.fadeIn = 0.5;
+                                    newPlayer.loop = true;
+                                    newPlayer.start();
+                                } catch (e2) {
+                                    console.error("Second attempt to play failed:", e2);
+                                }
+                            }, 300);
+                        }
+                    }
                 }
                 // --- Re-enable Next Track button ---
                 nextTrackBtn.disabled = false;
                 nextTrackBtn.textContent = 'Change Track';
+                clearTimeout(buttonSafetyTimeout);
             } else if (trackData && trackData.status === 'loading') {
                 // The track is currently being fetched, wait for it to load
                 console.log("Track is still loading, waiting to play...", currentPlayerKey);
@@ -393,6 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // Try to create a player from the pre-downloaded buffer
                         if (createPlayerFromBuffer(currentPlayerKey, buffer)) {
+                            clearTimeout(buttonSafetyTimeout);
                             return; // Successfully created and started player
                         }
                     }
@@ -744,7 +920,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }).toDestination();
                 player.connect(analyser);
-                
+
                 // Also pre-download the first track as raw data for redundancy
                 try {
                     const rawResponse = await fetch(firstTrack.path);
@@ -843,6 +1019,11 @@ document.addEventListener('DOMContentLoaded', () => {
             nextTrackBtn.classList.remove('clicked');
         }, 600);
         
+        // For mobile devices, try to resume audio context on each interaction
+        if (isMobile() && Tone.context.state !== 'running') {
+            Tone.context.resume().catch(err => console.warn("Context resume warning:", err));
+        }
+        
         handleInteraction(playNextTrack, e);
     });
     nextTrackBtn.addEventListener('touchstart', (e) => {
@@ -855,6 +1036,28 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             nextTrackBtn.classList.remove('clicked');
         }, 600);
+        
+        // For mobile devices, try to resume audio context on each touch
+        if (isMobile()) {
+            Tone.context.resume().catch(err => console.warn("Context resume warning:", err));
+            
+            // On iOS, we need to create and play a silent buffer to unlock audio
+            if (Tone.context.state !== 'running') {
+                const unlockAudio = () => {
+                    const buffer = Tone.context.createBuffer(1, 1, 22050);
+                    const source = Tone.context.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(Tone.context.destination);
+                    source.start(0);
+                    
+                    // Remove the touch event handler after unlocking
+                    document.body.removeEventListener('touchstart', unlockAudio);
+                };
+                
+                // Add a one-time touch event to unlock audio
+                document.body.addEventListener('touchstart', unlockAudio, { once: true });
+            }
+        }
         
         handleInteraction(playNextTrack, e);
     }, { passive: false });
