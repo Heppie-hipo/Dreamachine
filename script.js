@@ -324,32 +324,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const cylinderGeo = new THREE.CylinderGeometry(2, 2, 5, 32, 1, true);
         const alphaMapTexture = createCylinderPatternTexture();
         alphaMapTexture.wrapS = THREE.RepeatWrapping;
-        // Adjust for better 3D illusion - fewer repeats creates better depth perception
-        alphaMapTexture.repeat.set(3, 1);
-        const cylinderMat = new THREE.MeshBasicMaterial({ 
-            color: 0x000000, 
-            alphaMap: alphaMapTexture, 
-            transparent: true, 
-            alphaTest: 0.5, 
-            side: THREE.DoubleSide
-        });
+        alphaMapTexture.repeat.set(4, 1);
+        const cylinderMat = new THREE.MeshBasicMaterial({ color: 0x000000, alphaMap: alphaMapTexture, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
         cylinder = new THREE.Mesh(cylinderGeo, cylinderMat);
         scene.add(cylinder);
-
-        // Add silver wireframe outline for better cylinder visibility
-        const outlineGeo = new THREE.CylinderGeometry(2.01, 2.01, 5.01, 32, 4, true);
-        const outlineMat = new THREE.MeshBasicMaterial({
-            color: 0xC0C0C0, // Silver color
-            wireframe: true,
-            transparent: true,
-            opacity: 0.4,
-            side: THREE.DoubleSide
-        });
-        const cylinderOutline = new THREE.Mesh(outlineGeo, outlineMat);
-        scene.add(cylinderOutline);
-        // Make the outline rotate with the cylinder
-        cylinder.add(cylinderOutline);
-        cylinderOutline.rotation.y = 0; // Reset relative rotation
 
         const innerGeo = new THREE.CylinderGeometry(1.9, 1.9, 4.9, 32);
         const innerMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.FrontSide });
