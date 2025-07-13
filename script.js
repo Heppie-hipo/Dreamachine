@@ -512,6 +512,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 nextTrackBtn.disabled = false;
                 nextTrackBtn.textContent = 'Change Track';
                 clearTimeout(buttonSafetyTimeout);
+                // Automatically move to the following track so the flow continues
+                setTimeout(() => playNextTrack(), 0);
                 return;
             }
 
