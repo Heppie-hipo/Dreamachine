@@ -337,8 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         };
         
-        // Start both loading processes
-        preDownloadTrack();
+        // Start the single (blob-based) preload process
         preloadWithTonePlayer();
     };
     
@@ -559,24 +558,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // The track is currently being fetched, wait for it to load
                 console.log("Track is still loading, waiting to play...", currentPlayerKey);
                 
-                // Check if we've been waiting too long (more than 1 second)
-                if (retries < 7) { // After about 1 second (3 retries × 300ms)
-                    console.log("Loading taking too long, checking for pre-downloaded version...");
-                    
-                    // Check if we have a pre-downloaded version available
-                    if (preDownloadedTracks.has(currentPlayerKey)) {
-                        console.log("Using pre-downloaded version as fallback");
-                        const buffer = preDownloadedTracks.get(currentPlayerKey);
-                        
-                        // Try to create a player from the pre-downloaded buffer
-                        if (createPlayerFromBuffer(currentPlayerKey, buffer)) {
-                            clearTimeout(buttonSafetyTimeout);
-                            return; // Successfully created and started player
-                        }
-                    }
+                // Keep waiting; no raw-buffer fallback anymore (simpler and more reliable)
+                if (retries < 7) {
+                    // just keep polling until the blob-based player finishes loading
                 }
                 
-                setTimeout(() => playTrack(retries - 1), 300); // Check again shortly
+                setTimeout(() => playTrack(retries - 1), 300); // Retry shortly
             } else {
                 // Track not found, start preloading it now
                 console.log("Track not found, initiating on-demand load:", currentPlayerKey);
@@ -923,17 +910,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }).toDestination();
                 player.connect(analyser);
 
-                // Also pre-download the first track as raw data for redundancy
-                try {
-                    const rawResponse = await fetch(firstTrack.path);
-                    if (rawResponse.ok) {
-                        const buffer = await rawResponse.arrayBuffer();
-                        preDownloadedTracks.set(firstTrack.name, buffer);
-                        console.log(`Pre-downloaded raw data for first track: ${firstTrack.name}`);
-                    }
-                } catch (e) {
-                    console.warn("Failed to pre-download first track as raw data:", e);
-                }
             } else {
                 throw new Error("Shuffle queue was empty, no tracks to load.");
             }
