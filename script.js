@@ -834,9 +834,28 @@ document.addEventListener('DOMContentLoaded', () => {
     closeSidebar.isProcessing = false;
 
     // Use proper event listeners for both click and touch events on mobile
-    nextTrackBtn.addEventListener('click', (e) => handleInteraction(playNextTrack, e));
+    nextTrackBtn.addEventListener('click', (e) => {
+        // Add clicked class for visual feedback
+        nextTrackBtn.classList.add('clicked');
+        
+        // Remove the class after animation completes
+        setTimeout(() => {
+            nextTrackBtn.classList.remove('clicked');
+        }, 600);
+        
+        handleInteraction(playNextTrack, e);
+    });
     nextTrackBtn.addEventListener('touchstart', (e) => {
         hasUserInteracted = true; // Mark that user has interacted
+        
+        // Add clicked class for visual feedback
+        nextTrackBtn.classList.add('clicked');
+        
+        // Remove the class after animation completes
+        setTimeout(() => {
+            nextTrackBtn.classList.remove('clicked');
+        }, 600);
+        
         handleInteraction(playNextTrack, e);
     }, { passive: false });
     
