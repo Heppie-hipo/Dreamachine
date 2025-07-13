@@ -55,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { path: "Audio/A Drifting Up- Jon Hopkins.m4a", name: "A Drifting Up- Jon Hopkins.m4a" },
         { path: "Audio/A Fleeting Life feat James Yorkston- Max Cooper.m4a", name: "A Fleeting Life feat James Yorkston- Max Cooper.m4a" },
         { path: "Audio/Chromos- Max Cooper.m4a", name: "Chromos- Max Cooper.m4a" },
-        { path: "Audio/Four Tone Reflections- Max Cooper.m4a", name: "Four Tone Reflections- Max Cooper.m4a" },
         { path: "Audio/Hope- Max Cooper.m4a", name: "Hope- Max Cooper.m4a" },
         { path: "Audio/Impermanence feat Kathrin Deboer- Max Cooper.m4a", name: "Impermanence feat Kathrin Deboer- Max Cooper.m4a" },
         { path: "Audio/In Pursuit Of Ghosts- Max Cooper Tom Hodge.m4a", name: "In Pursuit Of Ghosts- Max Cooper Tom Hodge.m4a" },
@@ -72,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let shuffledQueue = [];
     let queuePosition = 0;
 
-    
+
     // --- Audio Engine ---
     const players = new Map(); // Using a Map to manage players manually
     let isAudioReady = false;
